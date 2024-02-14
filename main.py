@@ -1,9 +1,27 @@
 from mesa import Agent, Model
 from mesa.time import RandomActivation
+from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 
 from objects import Side, Order, Trade
+
+
+class BookKeeper(Agent):
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
+        self.order_book = []
+        self.trade_history = []
+
+    def record_order(self, order):
+        self.order_book.append(order)
+
+    def record_trade(self, trade):
+        self.trade_history.append(trade)
+
+    def step(self):
+        # clears orders that are able to be fulfilled?
+        pass
 
 
 class MarketMaker(Agent):
@@ -87,7 +105,10 @@ class MarketModel(Model):
         self.schedule = RandomActivation(self)
         self.market_maker = MarketMaker(0, self)
         self.time = 0
+        self.book_keeper = BookKeeper(0, self)
 
+        self.schedule.add(self.book_keeper)
+        self.schedule.add(self.market_maker)
         for i in range(self.num_agents):
             agent_strategy = random.choice([RandomStrategy(), MeanReversionStrategy()])
             a = TradingAgent(i + 1, self, agent_strategy)
@@ -177,10 +198,12 @@ class MarketModel(Model):
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
             agent.order_failed(order)
         self.orders.clear()
-    
+
     def step(self):
-        self.market_maker.step()
-        self.schedule.step()
+        def step(self):
+            Parallel(n_jobs=-1, prefer="threads")(
+                delayed(agent.step)() for agent in self.schedule.agents
+            )
         self.time += 1
 
 
