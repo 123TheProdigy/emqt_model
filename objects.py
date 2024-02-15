@@ -41,7 +41,7 @@ class Trade:
         self.quantity = quantity
         self.buyer = buyer
         self.seller = seller
-        self.time = Time
+        self.time = time
 
     def __str__(self) -> str:
         return "(" + self.buyer + " << " + self.seller + ", " + str(self.price) + ", " + str(
@@ -50,3 +50,13 @@ class Trade:
     def __repr__(self) -> str:
         return "(" + self.buyer + " << " + self.seller + ", " + str(self.price) + ", " + str(
             self.quantity) + ")"
+    
+
+class MMTrade(Trade):
+    """
+    A subclass of Trade to store more data concerning the order book at trade time 
+    """
+    def __init__(self, trade : Trade, order_book: List[Dict, Dict]):
+        super().__init__(trade.price, trade. quantity, trade.buyer, trade.seller, trade.time)
+        self.order_book = order_book 
+        

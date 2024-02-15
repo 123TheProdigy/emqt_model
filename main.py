@@ -23,6 +23,7 @@ class BookKeeper(Agent):
         self.ask_book = OrderedDict()
         self.market_orders = []
         self.trades = []
+        self.order_book = [self.bid_book, self.ask_book]
 
     def send_order(self, order: Order):
         """
@@ -60,8 +61,8 @@ class BookKeeper(Agent):
         """
         Process all orders at end of iteration
         """
-        best_ask = self.ask_book.keys()[0]
-        best_bid = self.bid_book.keys()[0]
+        best_ask = list(self.ask_book.keys())[0]
+        best_bid = list(self.bid_book.keys())[0]
 
         ## no concurrency yet 
         for order in self.market_orders:
@@ -108,12 +109,19 @@ class BookKeeper(Agent):
 
 class MarketMaker(Agent):
     def __init__(self, unique_id, model):
+        """
+        Will want some way to track posted bids with hit bids, maybe just with the trade object 
+
+        best_bids: append the best bid value at each iteration 
+        best_asks: append the best ask value at each iteration 
+        """
         super().__init__(unique_id, model)
         self.price = 100.0
 
         self.pnl = 0
         self.net_position = 0
-        self.trades = []
+        self.best_bids = []
+        self.best_asks = []
 
     def step(self):
         demand = sum(
