@@ -19,6 +19,7 @@ class BookKeeper(Agent):
         """
         super().__init__(unique_id, model)
         self.time = 0
+        self.asset_price = 100 # arbitrary asset price for now 
         self.bid_book = OrderedDict()
         self.ask_book = OrderedDict()
         self.market_orders = []
@@ -27,9 +28,9 @@ class BookKeeper(Agent):
 
     def send_order(self, order: Order):
         """
-        Agent sends order to the market with this function
+        Trading agent sends order to the market with this function
         """
-        self.orders.append(order)
+        self.market_orders.append(order)
         
     def insert_bid(self, order: Order):
         keys_to_move = [k for k in self.bid_book if k < order.price]
@@ -51,11 +52,14 @@ class BookKeeper(Agent):
             self.ask_book[order.price][0] += order.quantity
             self.ask_book[order.price][1].append(order)
 
-    def send_limit_order(self, order: Order):
-        if order.side == Side.BUY:
-            self.insert_bid(order)
-        else:
-            self.insert_ask(order)
+    # def send_limit_order(self, order: Order):
+    #     """
+    #     Move to MM agent 
+    #     """
+    #     if order.side == Side.BUY:
+    #         self.insert_bid(order)
+    #     else:
+    #         self.insert_ask(order)
 
     def process_market_orders(self):
         """
@@ -100,7 +104,7 @@ class BookKeeper(Agent):
         for order in self.market_orders:
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
             agent.order_failed(order) ## notify agent that their order failed 
-        self.orders.clear()
+        self.market_orders.clear()
 
     def step(self):
         # clears orders that are able to be fulfilled?
@@ -122,6 +126,12 @@ class MarketMaker(Agent):
         self.net_position = 0
         self.best_bids = []
         self.best_asks = []
+
+    def send_limit_order(self, order: Order):
+        if order.side == Side.BUY:
+            self.insert_bid(order)
+        else:
+            self.insert_ask(order)  
 
     def step(self):
         demand = sum(
