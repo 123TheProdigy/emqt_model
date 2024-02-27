@@ -31,13 +31,10 @@ class BookKeeper(Agent):
         """
         Trading agent sends order to the market with this function
         """
-<<<<<<< HEAD
         self.market_orders.append(order)
         
-=======
         self.orders.append(order)
 
->>>>>>> 725a9149aaeee12d12145b3ef6cbdfc8f805bc60
     def insert_bid(self, order: Order):
         keys_to_move = [k for k in self.bid_book if k < order.price]
         if order.price not in self.bid_book:
@@ -109,13 +106,10 @@ class BookKeeper(Agent):
         ## order clearing?
         for order in self.market_orders:
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
-<<<<<<< HEAD
             agent.order_failed(order) ## notify agent that their order failed 
         self.market_orders.clear()
-=======
             agent.order_failed(order)  ## notify agent that their order failed
         self.orders.clear()
->>>>>>> 725a9149aaeee12d12145b3ef6cbdfc8f805bc60
 
     def step(self):
         # clears orders that are able to be fulfilled?
@@ -124,12 +118,6 @@ class BookKeeper(Agent):
 
 class MarketMaker(Agent):
     def __init__(self, unique_id, model):
-        """
-        Will want some way to track posted bids with hit bids, maybe just with the trade object 
-
-        best_bids: append the best bid value at each iteration 
-        best_asks: append the best ask value at each iteration 
-        """
         super().__init__(unique_id, model)
         self.price = 100.0
 
