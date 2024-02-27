@@ -4,6 +4,7 @@ import numpy as np
 import enum
 from scipy.stats import norm
 import math
+from scipy.optimize import fixed_point
 
 Time = int
 Symbol = str
@@ -118,7 +119,7 @@ class Vi_prior():
     the priors. The i-th value inside this vector is the CDF of N(0, sigma) based on i. 
     """
 
-    def __init__(self, sigma: float, centered_at: float):
+    def __init__(self, sigma: float, centered_at: float, multiplier: int = 1):
         """
         sigma: the std of jump 
         centered_at: value around which the discrete vector of probabilities is centered (can be initialized to true value at t=0)
@@ -128,7 +129,7 @@ class Vi_prior():
 
         self.sigma = sigma
         self.center = centered_at
-        self.multiplier = 1 # (400/(2 * 4 * sigma)) 
+        self.multiplier = multiplier # (400/(2 * 4 * sigma)) 
         self.vec_v = None
         self.prior_v = None
         self.v_history = []
@@ -174,7 +175,8 @@ class Vi_prior():
         self.p_history.append(prior_v)
     
     def compute_posterior(self, order_type: int, Pbuy: float, Psell: float, Pno: float, Pa: float, Pb: float, 
-                          alpha: float, eta: float, sigma_w: float, scale: float = 1) -> list:
+                          alpha: float, beta: float, rho: float, theta: float, mr_true: int, mom_true: int, eta: float, 
+                          sigma_w: float, scale: float = 1) -> list:
         """
         Compute the posterior probability of P(V=Vi | Order), which represents the updated beliefs about the asset's true value
         given a new trade has occurred. 
@@ -189,6 +191,11 @@ class Vi_prior():
         Pa: ask price of the transaction
         Pb: bid price of the transaction
         alpha: proportion of informed trader (perfectly informed or noisy informed)
+        beta: proportion of uninformed trader
+        rho: proportion of mean reverting trader
+        theta: proportion of momentum trader 
+        mr_true: 1 if mean reverting signal positive else 0 
+        mom_true: 1 if momentum signal positive else 0 
         eta: proba of buy/sell order for uninformed trader (again, the market maker is aware of the probabilstic structure 
                 of trading agents)
         sigma_w: std of noise distribution (gaussian) of noisy informed traders
@@ -203,17 +210,17 @@ class Vi_prior():
 
         if order_type == 1:
             for i, v in enumerate(self.vec_v):
-                post.append(scale * self.prior_v[i] * ((1 - alpha) * eta + alpha * (1 - norm.cdf(x = Pa-v, scale = sigma_w))))
+                post.append(scale * self.prior_v[i] * (beta * eta + alpha * (1 - norm.cdf(x = Pa-v, scale = sigma_w) + rho * mr_true + theta * mom_true)))
             post = np.array(post)/Pbuy
 
         elif order_type == -1:
             for i, v in enumerate(self.vec_v):
-                post.append(scale * self.prior_v[i] * ((1 - alpha) * eta + alpha * norm.cdf(x = Pb-v, scale = sigma_w)))
+                post.append(scale * self.prior_v[i] * (beta * eta + alpha * norm.cdf(x = Pb-v, scale = sigma_w) + rho * mr_true + theta * mom_true))
             post = np.array(post)/Psell
 
         else:
             for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i] * ((1 - 2*eta) * (1 - alpha) + alpha * (norm.cdf(x = Pa-v, scale = sigma_w) - norm.cdf(x = Pb-v, scale = sigma_w))))
+                post.append(self.prior_v[i] * ((1 - 2*eta) * beta + alpha * (norm.cdf(x = Pa-v, scale = sigma_w) - norm.cdf(x = Pb-v, scale = sigma_w)) + rho * mr_true + theta * mom_true))
             post = np.array(post)/Pno
 
         self.prior_v = post
@@ -221,118 +228,6 @@ class Vi_prior():
         self.v_history.append(self.vec_v)
 
         return post
-    
-def P_buy(Pa: float, alpha: float, eta: float, sigma_w: float, vec_v: list, v_prior: list) -> float:
-    """
-    The a priori probability of a buy order at some ask price Pa
-
-    Pa: ask price to calculate probability of buy order occuring 
-    alpha: probability of an informed trader
-    eta: probability of a noisy informed trader
-    sigma_w: std of noisy informed trader's noise
-    vec_v: vector of possible values for V_i
-    v_prior: prior probability of V = V_i
-    """
-    result = 0
-    for i, v in enumerate(vec_v):
-        if v <= Pa:
-            result += (alpha * (1 - norm.cdf(Pa - v, scale=sigma_w)) + (1 - alpha) * eta) * v_prior[i]
-        else:
-            result += (alpha * norm.cdf(v - Pa, scale=sigma_w) + (1 - alpha) * eta) * v_prior[i]
-    return result
-
-def P_sell(Pb: float, alpha: float, eta: float, sigma_w: float, vec_v: list, v_prior: list) -> float:
-    """
-    The a priori probability of a sell order at some bid price Pb
-
-    Pb: bid price to calculate probability of sell order occuring 
-    alpha: probability of an informed trader
-    eta: probability of a noisy informed trader
-    sigma_w: std of noisy informed trader's noise
-    vec_v: vector of possible values for V_i
-    v_prior: prior probability of V = V_i
-    """
-    result = 0
-    for i, v in enumerate(vec_v):
-        if v >= Pb:
-            result += (alpha * (1 - norm.cdf(Pb - v, scale=sigma_w)) + (1 - alpha) * eta) * v_prior[i]
-        else:
-            result += (alpha * norm.cdf(v - Pb, scale=sigma_w) + (1 - alpha) * eta) * v_prior[i]
-    return result
-
-def P_no(Pb: float, Pa: float, alpha: float, eta: float, sigma_w: float, vec_v: float, v_prior: float):
-    """
-    The a priori probability of no order being placed at either the bid price Pb or the ask price Pa
-
-    Pb: bid price 
-    Pa: ask price
-    alpha: probability of an informed trader
-    eta: probability of a noisy informed trader
-    sigma_w: std of noisy informed trader's noise
-    vec_v: vector of possible values for V_i
-    v_prior: prior probability of V = V_i
-    """
-    assert Pa > Pb, "something went wrong, your ask is lower than your bid"
-    prob = (1 - alpha) * (1 - 2*eta)
-
-    for i, v in enumerate(vec_v):
-        prob += v_prior[i] * alpha * (norm.cdf(x = Pa - v, scale = sigma_w) - norm.cdf(x = Pb - v, scale = sigma_w))
-
-    return prob
-
-def Pb_fp(Pb: float, alpha: float, eta: float, sigma_w: float, vec_v: float, v_prior: float):
-    """
-    Fixed point equations to be solved using fixed point iteration
-
-    Pb: bid price 
-    alpha: probability of an informed trader
-    eta: probability of a noisy informed trader
-    sigma_w: std of noisy informed trader's noise
-    vec_v: vector of possible values for V_i
-    v_prior: prior probability of V = V_i
-    """
-    assert all(v >= 0 for v in vec_v), "you got negative prices"
-    p_sell = P_sell(Pb, alpha, eta, sigma_w, vec_v, v_prior)
-
-    vec_v = np.array(vec_v)
-    v_prior = np.array(v_prior)
-    
-    cdf_values_below = norm.cdf(Pb - vec_v, scale=sigma_w)
-    cdf_values_above = 1 - cdf_values_below ## fixed version 
-
-    mask_below, mask_above = vec_v <= Pb, vec_v > Pb
-    expected_value_below = np.sum(((1 - alpha) * eta + alpha * cdf_values_below[mask_below]) * vec_v[mask_below] * v_prior[mask_below])
-    expected_value_above = np.sum(((1 - alpha) * eta + alpha * cdf_values_above[mask_above]) * vec_v[mask_above] * v_prior[mask_above])
-
-    result = expected_value_below + expected_value_above
-    return result / p_sell 
-
-def Pa_fp(Pa: float, alpha: float, eta: float, sigma_w: float, vec_v: float, v_prior: float):
-    """
-    Fixed point equations to be solved using fixed point iteration
-
-    Pa: ask price 
-    alpha: probability of an informed trader
-    eta: probability of a noisy informed trader
-    sigma_w: std of noisy informed trader's noise
-    vec_v: vector of possible values for V_i
-    v_prior: prior probability of V = V_i
-    """
-    assert all(v >= 0 for v in vec_v), "you got negative prices"
-    p_buy = P_buy(Pa, alpha, eta, sigma_w, vec_v, v_prior)
-
-    vec_v = np.array(vec_v)
-    v_prior = np.array(v_prior)
-
-    cdf_values_below =  norm.cdf(Pa - vec_v, scale = sigma_w)
-    cdf_values_above = 1 - cdf_values_below
-
-    mask_below, mask_above = vec_v <= Pa, vec_v > Pa
-    expected_value_below = np.sum(((1 - alpha) * eta + alpha * cdf_values_above[mask_below]) * vec_v[mask_below] * v_prior[mask_below])
-    expected_value_above = np.sum(((1 - alpha) * eta + alpha * cdf_values_below[mask_above]) * vec_v[mask_above] * v_prior[mask_above])
-
-    result = expected_value_below + expected_value_above
-    return result / p_buy
 
 class God():
     """
@@ -360,8 +255,8 @@ class God():
         beta: proportion of uninformed traders
         rho: proportion of mean reverting traders
         theta: proportion of momentum traders 
-        mr_t: deviation threshold for mean reverting trader
-        mom_t: deviation threshold for momentum trader 
+        mr_thresh: deviation threshold for mean reverting trader
+        mom_thresh: deviation threshold for momentum trader 
         eta: probability an uninformed trader places a buy/sell order
         sigma_w: std of noisy informed trader (normal)
         V0: true initial value
@@ -377,7 +272,7 @@ class God():
         V0
     """
     def __init__(self, tmax: int, sigma: float, jump_prob: float, alpha: float, beta: float, rho: float, theta: float, 
-                 mr_t: float, mom_t: float, eta: float, sigma_w: float, V0: float, extend_spread: Optional[float] = 0, 
+                 mr_thresh: float, mom_thresh: float, eta: float, sigma_w: float, V0: float, extend_spread: Optional[float] = 0, 
                  gamma: Optional[float] = 0, mr_window: Optional[int] = 10, mom_window: Optional[int] = 10):
         self.tmax = tmax
         self.sigma = sigma
@@ -386,8 +281,8 @@ class God():
         self.beta = beta
         self.rho = rho
         self.theta = theta
-        self.mr_t = mr_t
-        self.mom_t = mom_t
+        self.mr_thresh = mr_thresh
+        self.mom_thresh = mom_thresh
         self.eta = eta
         self.sigma_w = sigma_w
         self.V0 = V0
@@ -395,11 +290,14 @@ class God():
         self.gamma = gamma
         self.mr_window = mr_window
         self.mom_window = mom_window
+        self.multiplier = 1
+        self.eps = 1e-8
 
         self.jumps, self.true_value = self.get_asset_dynamics()
         self.midpoint = self.true_value[0] # initialize LOB midpoint as true price for iteration 1
-        self.momentum = 0 # intialize momentum as 0 since nothing has happened 
-        self.ptd = [] # prices to date
+        self.ptd = [] # prices to date, treat as a stack 
+        self.ema = 0 # for momentum strat 
+        self.i = 0 # ITERATION # 
 
     def get_asset_dynamics(self):
         val = asset_dynamics(p_jump=self.proba_jump, sigma=self.sigma_price, init_price=self.V0)
@@ -407,7 +305,8 @@ class God():
 
         return val.dynamics["jumps"].to_list(), val.price(tmax=self.tmax).to_list() 
     
-    def P_buy(self, Pa: float, vec_v: list, v_prior: list) -> float:
+    def P_buy(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+              vec_v: list, v_prior: list) -> float:
         """
         The a priori probability of a buy order at some ask price Pa
 
@@ -418,12 +317,13 @@ class God():
         result = 0
         for i, v in enumerate(vec_v):
             if v <= Pa:
-                result += (self.alpha * (1 - norm.cdf(Pa - v, scale=self.sigma_w)) + (self.beta) * self.eta) * v_prior[i]
+                result += (alpha * (1 - norm.cdf(Pa - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
             else:
-                result += (self.alpha * norm.cdf(v - Pa, scale=self.sigma_w) + (self.beta) * self.eta) * v_prior[i]
+                result += (alpha * norm.cdf(v - Pa, scale = sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
         return result * self.sizing_factor()
 
-    def P_sell(self, Pb: float, vec_v: list, v_prior: list) -> float:
+    def P_sell(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+               vec_v: list, v_prior: list) -> float:
         """
         The a priori probability of a sell order at some bid price Pb
 
@@ -434,12 +334,13 @@ class God():
         result = 0
         for i, v in enumerate(vec_v):
             if v >= Pb:
-                result += (self.alpha * (1 - norm.cdf(Pb - v, scale=self.sigma_w)) + (self.beta) * self.eta) * v_prior[i]
+                result += (alpha * (1 - norm.cdf(Pb - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
             else:
-                result += (self.alpha * norm.cdf(v - Pb, scale=self.sigma_w) + (self.beta) * self.eta) * v_prior[i]
+                result += (alpha * norm.cdf(v - Pb, scale=self.sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
         return result * self.sizing_factor()
 
-    def P_no(self, Pb: float, Pa: float, vec_v: float, v_prior: float):
+    def P_no(self, Pb: float, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+             vec_v: float, v_prior: float):
         """
         The a priori probability of no order being placed at either the bid price Pb or the ask price Pa
 
@@ -449,14 +350,17 @@ class God():
         v_prior: prior probability of V = V_i
         """
         assert Pa > Pb, "something went wrong, your ask is lower than your bid"
-        prob = (1 - self.alpha) * (1 - 2*self.eta)
+        prob = (beta) * (1 - 2*eta)
+        mr = 1 - mr
+        mom = 1 - mom
 
         for i, v in enumerate(vec_v):
-            prob += v_prior[i] * self.alpha * (norm.cdf(x = Pa - v, scale = self.sigma_w) - norm.cdf(x = Pb - v, scale = self.sigma_w))
+            prob += v_prior[i] * alpha * (norm.cdf(x = Pa - v, scale = sigma_w) - norm.cdf(x = Pb - v, scale = sigma_w))
 
         return prob
 
-    def Pb_fp(self, Pb: float, alpha: float, vec_v: float, v_prior: float):
+    def Pb_fp(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+              vec_v: float, v_prior: float):
         """
         Fixed point equations to be solved using fixed point iteration
 
@@ -465,22 +369,23 @@ class God():
         v_prior: prior probability of V = V_i
         """
         assert all(v >= 0 for v in vec_v), "you got negative prices"
-        p_sell = P_sell(Pb, alpha, self.eta, self.sigma_w, vec_v, v_prior)
+        p_sell = self.P_sell(Pb, alpha, beta, rho, theta, mr, mom, eta, sigma_w, vec_v, v_prior)
 
         vec_v = np.array(vec_v)
         v_prior = np.array(v_prior)
         
-        cdf_values_below = norm.cdf(Pb - vec_v, scale=self.sigma_w)
+        cdf_values_below = norm.cdf(Pb - vec_v, scale = sigma_w)
         cdf_values_above = 1 - cdf_values_below ## fixed version 
 
         mask_below, mask_above = vec_v <= Pb, vec_v > Pb
-        expected_value_below = np.sum(((self.beta) * self.eta + alpha * cdf_values_below[mask_below]) * vec_v[mask_below] * v_prior[mask_below])
-        expected_value_above = np.sum(((self.beta) * self.eta + alpha * cdf_values_above[mask_above]) * vec_v[mask_above] * v_prior[mask_above])
+        expected_value_below = np.sum((beta * eta + alpha * cdf_values_below[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
+        expected_value_above = np.sum((beta * eta + alpha * cdf_values_above[mask_above]) * vec_v[mask_above] * v_prior[mask_above] + rho * mr + theta * mom)
 
         result = expected_value_below + expected_value_above
         return result / p_sell 
 
-    def Pa_fp(self, Pa: float, alpha: float, vec_v: float, v_prior: float):
+    def Pa_fp(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+              vec_v: float, v_prior: float):
         """
         Fixed point equations to be solved using fixed point iteration
 
@@ -489,17 +394,17 @@ class God():
         v_prior: prior probability of V = V_i
         """
         assert all(v >= 0 for v in vec_v), "you got negative prices"
-        p_buy = P_buy(Pa, alpha, self.eta, self.sigma_w, vec_v, v_prior)
+        p_buy = self.P_buy(Pa, alpha, beta, rho, theta, mr, mom, eta, sigma_w, vec_v, v_prior)
 
         vec_v = np.array(vec_v)
         v_prior = np.array(v_prior)
 
-        cdf_values_below =  norm.cdf(Pa - vec_v, scale = self.sigma_w)
+        cdf_values_below =  norm.cdf(Pa - vec_v, scale = sigma_w)
         cdf_values_above = 1 - cdf_values_below
 
         mask_below, mask_above = vec_v <= Pa, vec_v > Pa
-        expected_value_below = np.sum(((self.beta) * self.eta + alpha * cdf_values_above[mask_below]) * vec_v[mask_below] * v_prior[mask_below])
-        expected_value_above = np.sum(((self.beta) * self.eta + alpha * cdf_values_below[mask_above]) * vec_v[mask_above] * v_prior[mask_above])
+        expected_value_below = np.sum((beta * eta + alpha * cdf_values_above[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
+        expected_value_above = np.sum((beta * eta + alpha * cdf_values_below[mask_above]) * vec_v[mask_above] * v_prior[mask_above] + rho * mr + theta * mom)
 
         result = expected_value_below + expected_value_above
         return result / p_buy
@@ -509,3 +414,121 @@ class God():
         b = self.eta
         exponent = -scale * 3.36358566 * (a**2/(b**.25 + .25)) * (size - 10) # center in middle
         return (1/(1+math.exp(exponent))) + 0.5
+    
+    def compute_exp_true_value(self, Pb: float, Pa: float, psell: float, pbuy: float, vec_v: list, v_prior: list, alpha: float, eta: float, sigma_w: float) -> float:
+        """
+        Compute the expected value of the asset; only use informed traders? 
+
+        Pb: bid price
+        Pa: ask price
+        psell: prior probability of a sell order
+        pbuy: prior probability of a buy order
+        vec_v: vector of V_i values
+        v_prior: prior probability of V = V_i
+        alpha: proportion of informed traders
+        beta: proportion of uninformed traders
+        rho: proportion of mean reversion traders
+        theta: proportion of momentum traders
+        eta: uninformed trader buy/sell probability
+        sigma_w: std of noise for noisy informed traders
+        """
+
+        exp = Pa*psell + Pb*pbuy 
+        for i, v in enumerate(vec_v):
+            exp += v*v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale = sigma_w) - norm.cdf(x=Pb-v, scale = sigma_w)) # effectively the prob true value is between the bid/ask
+        
+        return exp
+    
+    def comp_mr_indicator(self):
+        if len(self.ptd) < self.mr_window:
+            return 0
+
+        mean_price = sum(self.ptd[:self.mr_window]) / self.mr_window
+        deviation = self.ptd[0] - mean_price
+        if abs(deviation) > self.mr_thresh:
+            return 1
+        return 0
+    
+    def comp_mom_indicator(self, alpha: float = 0.1):
+        if len(self.ptd) < self.mom_window:
+            return 0
+
+        if self.ema is None:
+            self.ema = sum(self.ptd[-self.mom_window:]) / self.mom_window
+        else:
+            self.ema = alpha * self.ptd[0] + (1 - alpha) * self.ema
+        
+        momentum = self.ptd[0] - self.ema
+        if abs(momentum) > self.mom_thresh:
+            return 1
+        return 0
+    
+    def run_and_advance(self):
+        """
+        Essentially taking a time step (such as the market model step function)
+
+        Need to create senders and receivers for messages to MM and traders 
+        """
+        self.v_distrib = Vi_prior(sigma_price = self.sigma, centered_at = self.V0, multiplier = self.multiplier)
+
+        self.mr_indicator = self.comp_mr_indicator()
+        self.mom_indicator = self.comp_mom_indicator()
+
+        self.asks = [] 
+        self.bids = []
+        self.exp_value = []
+        self.pnl = [] # shouldn't need, MM is not God
+        self.inventory = [0] # shouldn't need, MM is not God 
+
+        if self.jumps[self.i] == 1:
+            self.v_distrib.reset(centered_at=self.exp_value[-1])
+
+        curr_ask = fixed_point(self.Pa_fp, self.true_value[self.i], args=(self.alpha, self.beta, self.rho, 
+                                                                          self.theta, self.mr_indicator, self.mom_indicator, 
+                                                                          self.eta, self.sigma_w, self.v_distrib.vec_v, 
+                                                                          self.v_distrib.prior_v), xtol=1e-2, maxiter=500, method='del2').item()
+        curr_ask += -self.gamma * self.inventory[-1]
+        curr_ask += self.extend_spread ## extend spread
+        self.asks.append(curr_ask)
+
+        curr_bid = fixed_point(self.Pb_fp, self.true_value[self.i], args=(self.alpha, self.beta, self.rho, 
+                                                                          self.theta, self.mr_indicator, self.mom_indicator, 
+                                                                          self.eta, self.sigma_w, self.v_distrib.vec_v, 
+                                                                          self.v_distrib.prior_v), xtol=1e-2, maxiter=500, method='del2').item()
+        curr_bid += -self.gamma*self.inventory[-1]
+        curr_bid += -self.extend_spread ## extend spread
+        self.bids.append(curr_bid)
+
+        Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
+                          mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, sigma_w=self.sigma_w, 
+                          vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
+        assert Pbuy>0-self.eps and Pbuy<1+self.eps, "Pbuy not between 0 and 1"
+        
+        Psell = self.P_sell(Pb=self.bids[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, theta=self.theta, 
+                            mr=self.mr_indicator, mom=self.mom_indicator, eta = self.eta, sigma_w=self.sigma_w, 
+                            vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
+        assert Psell>0-self.eps and Psell<1+self.eps, "Psell not between 0 and 1"
+        
+        Pnoorder = self.P_no_order(Pb=self.bids[-1], Pa=self.asks[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, 
+                                   theta=self.theta, mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, 
+                                   sigma_w=self.sigma_w, vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
+        assert Pnoorder>0-self.eps and Pnoorder<1+self.eps, "P_noorder not between 0 and 1"
+
+        assert Psell+Pbuy+Pnoorder>0-self.eps and Pbuy +Psell+Pnoorder<1+self.eps
+
+        self.exp_value.append(self.compute_exp_true_value(Pb=self.bids[-1], Pa=self.asks[-1], psell=Psell, pbuy=Pbuy, 
+                                                          vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v, 
+                                                          alpha=self.alpha, eta=self.eta, sigma_w=self.sigma_w))
+        
+
+        ## SEND VALUES TO MM AND TRADERS HERE 
+        trade = False # SHOULD BE RETURNED TRADES FROM PERSPECTIVE OF MM 
+
+        self.v_distrib.compute_posterior(trade, Pbuy=Pbuy, Psell=Psell, Pno=Pnoorder, Pa=self.asks[-1], Pb=self.bids[-1], 
+                                         alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
+                                         mr_true=self.mr_indicator, mom_true=self.mom_indicator, eta=self.eta, 
+                                         sigma_w=self.sigma_w, update_prior=True)
+
+        assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
+
+        self.i += 1

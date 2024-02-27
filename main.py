@@ -4,6 +4,7 @@ from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 import numpy as np
+from scipy.optimize import fixed_point
 
 from objects import Side, Order, Trade
 
@@ -107,7 +108,7 @@ class BookKeeper(Agent):
         for order in self.market_orders:
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
             agent.order_failed(order) ## notify agent that their order failed 
-        self.market_orders.clear()
+            self.market_orders.clear()
             agent.order_failed(order)  ## notify agent that their order failed
         self.orders.clear()
 
