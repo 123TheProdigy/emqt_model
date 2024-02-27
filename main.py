@@ -3,6 +3,7 @@ from mesa.time import RandomActivation
 from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
+import numpy as np
 
 from objects import Side, Order, Trade
 
@@ -30,8 +31,13 @@ class BookKeeper(Agent):
         """
         Trading agent sends order to the market with this function
         """
+<<<<<<< HEAD
         self.market_orders.append(order)
         
+=======
+        self.orders.append(order)
+
+>>>>>>> 725a9149aaeee12d12145b3ef6cbdfc8f805bc60
     def insert_bid(self, order: Order):
         keys_to_move = [k for k in self.bid_book if k < order.price]
         if order.price not in self.bid_book:
@@ -47,7 +53,7 @@ class BookKeeper(Agent):
         if order.price not in self.ask_book:
             self.ask_book[order.price] = [order.quantity, [order]]
             for key in reversed(keys_to_move):
-                self.ask_book.move_to_end(key, last = False)
+                self.ask_book.move_to_end(key, last=False)
         else:
             self.ask_book[order.price][0] += order.quantity
             self.ask_book[order.price][1].append(order)
@@ -81,9 +87,9 @@ class BookKeeper(Agent):
 
                     order.quantity -= vol
                     self.ask_book[best_ask][0] -= vol
-                    
+
                     if self.ask_book[best_ask][0] == 0:
-                        del self.ask_book[best_ask]  
+                        del self.ask_book[best_ask]
 
             elif order.side == Side.SELL:
                 while order.quantity > 0 and self.bid_book:
@@ -93,18 +99,23 @@ class BookKeeper(Agent):
 
                     self.trades.append(Trade(best_bid, vol, order.agend_id, "tbd_buyer id", self.time))
                     ## need to figure out sending order filled message to agents
-                    
+
                     order.quantity -= vol
                     self.bid_book[best_bid][0] -= vol
-                    
+
                     if self.bid_book[best_bid][0] <= 0:
                         del self.bid_book[best_bid]
 
         ## order clearing?
         for order in self.market_orders:
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
+<<<<<<< HEAD
             agent.order_failed(order) ## notify agent that their order failed 
         self.market_orders.clear()
+=======
+            agent.order_failed(order)  ## notify agent that their order failed
+        self.orders.clear()
+>>>>>>> 725a9149aaeee12d12145b3ef6cbdfc8f805bc60
 
     def step(self):
         # clears orders that are able to be fulfilled?
@@ -148,6 +159,7 @@ class TradingAgent(Agent):
 
     self.exchange: the bookkeeper to send trades to / receive messages from
     """
+
     def __init__(self, unique_id, model, strategy, bookkeeper: BookKeeper):
         super().__init__(unique_id, model)
 
@@ -159,13 +171,13 @@ class TradingAgent(Agent):
         self.posted_bids = []
         self.posted_offers = []
         self.hit_bids = []
-        self.hit_asks = [] 
+        self.hit_asks = []
 
         self.failed_orders = []
 
     def decide_order(self, price):
         return self.strategy.decide_order(price)
-    
+
     def order_failed(self, order: Order):
         """
         If the bookkeeper fails to fill an order, we note that it failed 
@@ -205,19 +217,115 @@ class RandomStrategy:
 
 
 class MeanReversionStrategy:
-    def decide_order(self, price):
-        if price > 100:
+    def __init__(self, window_size=10, threshold=1.0):
+        self.window_size = window_size
+        self.threshold = threshold
+
+    def calculate_mean(self, price_history):
+        if len(price_history) < self.window_size:
+            return None
+
+        mean_price = sum(price_history) / len(price_history)
+        return mean_price
+
+    def decide_order(self, price_history):
+        mean_price = self.calculate_mean(price_history)
+        if mean_price is None:
+            return 0
+
+        current_price = price_history[-1]
+        deviation = current_price - mean_price
+
+        if deviation > self.threshold:
             return -1
-        elif price < 100:
+        elif deviation < -self.threshold:
             return 1
         else:
-            return random.choice([-1, 1])
+            return 0
+
+
+class NoiseStrategy:
+    """
+    Noise trader using geometric Brownian motion.
+
+    Either constructor/decide_order to be changed to incorporate past prices
+    or fit_parameters must be called before decide_order
+    """
+
+    def __init__(self, initial_price=100.0, dt=1):
+        self.volatility = None
+        self.drift = None
+        self.price = initial_price
+        self.dt = dt
+
+    def fit_parameters(self, price_history):
+        """
+        Fit drift and volatility parameters using OLS regression on historical price data.
+        """
+        returns = np.diff(np.log(price_history))
+        X = np.vstack((np.ones_like(returns), np.arange(len(returns)))).T
+        y = returns[1:]
+
+        params = np.linalg.lstsq(X, y, rcond=None)[0]
+
+        # Drift is the intercept, volatility is the slope
+        self.drift = params[0]
+        self.volatility = params[1] / np.sqrt(self.dt)  # Adjust volatility for time step
+
+    def decide_order(self, price_history):
+        self.fit_parameters(price_history)
+        dW = np.random.normal(loc=0, scale=np.sqrt(self.dt))
+        dS = self.drift * self.price * self.dt + self.volatility * self.price * dW
+        # self.price += dS
+
+        if dS > 0:
+            return 1
+        elif dS < 0:
+            return -1
+        else:
+            return 0
+
+
+class MomentumStrategy:
+    """
+    Momentum strategy using exponential moving average.
+    We could also use other methods like SMA, ROC, etc.
+    """
+
+    def __init__(self, window_size=10, alpha=0.1):
+        self.window_size = window_size
+        self.alpha = alpha  # Smoothing factor for EMA
+        self.ema = None
+
+    def calculate_ema(self, price_history):
+        if self.ema is None:
+            self.ema = price_history[0]
+        else:
+            self.ema = self.alpha * price_history[-1] + (1 - self.alpha) * self.ema
+        return self.ema
+
+    def decide_order(self, price_history):
+        if len(price_history) < self.window_size:
+            return 0
+
+        ema = self.calculate_ema(price_history)
+
+        # Calculate momentum as the difference between the current price and EMA
+        momentum = price_history[-1] - ema
+
+        if momentum > 0:
+            return 1
+        elif momentum < 0:
+            return -1
+        else:
+            return 0
 
 
 class MarketModel(Model):
     """
     Market model to represent trading environment. 
     """
+
     def __init__(self, N):
         """
         Market model to handle agent interactions and other stuff 
@@ -242,6 +350,7 @@ class MarketModel(Model):
             Parallel(n_jobs=-1, prefer="threads")(
                 delayed(agent.step)() for agent in self.schedule.agents
             )
+
         self.time += 1
 
 
