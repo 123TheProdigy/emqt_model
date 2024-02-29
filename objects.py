@@ -5,6 +5,7 @@ import enum
 from scipy.stats import norm
 import math
 from scipy.optimize import fixed_point
+from main import UninformedStrategy, NoiseStrategy, InformedStrategy
 
 Time = int
 Symbol = str
@@ -463,7 +464,34 @@ class God():
             return 1
         return 0
     
-    def run_and_advance(self):
+    def send_info(self, directory, bid_price, bid_volume, ask_price, ask_volume, true_val):
+        """
+        Sends information to market agents by iterating through hashmap 
+
+        directory: hashmap of all agents and their respective strategies 
+        """
+        mm_quote = (bid_price, bid_volume, ask_price, ask_volume)
+        informed_val = true_val
+        for id, agent in directory.items():
+            if id == 0:
+                agent.receive_quote()
+            elif agent.strategy is InformedStrategy or NoiseStrategy:
+                agent.receive_true(true_val)
+
+    def receive_trade(self, interaction_result):
+        """
+        Receive trade for updating posterior 
+
+        interaction_result: tuple(Bool, Order), bool is true if an order was placed, false if no order was placed 
+                            and Order is none if no order placed
+        """
+        if interaction_result[0] == False:
+            return 0
+        if interaction_result[1].side == Side.BUY:
+            return 1
+        return -1
+    
+    def run_and_advance(self, trade = 0):
         """
         Essentially taking a time step (such as the market model step function)
 
@@ -521,8 +549,8 @@ class God():
                                                           alpha=self.alpha, eta=self.eta, sigma_w=self.sigma_w))
         
 
-        ## SEND VALUES TO MM AND TRADERS HERE 
-        trade = False # SHOULD BE RETURNED TRADES FROM PERSPECTIVE OF MM 
+        
+        trade = trade # SHOULD BE RETURNED TRADES FROM PERSPECTIVE OF MM 
 
         self.v_distrib.compute_posterior(trade, Pbuy=Pbuy, Psell=Psell, Pno=Pnoorder, Pa=self.asks[-1], Pb=self.bids[-1], 
                                          alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 

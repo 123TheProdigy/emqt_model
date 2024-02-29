@@ -56,14 +56,14 @@ class BookKeeper(Agent):
             self.ask_book[order.price][0] += order.quantity
             self.ask_book[order.price][1].append(order)
 
-    # def send_limit_order(self, order: Order):
-    #     """
-    #     Move to MM agent 
-    #     """
-    #     if order.side == Side.BUY:
-    #         self.insert_bid(order)
-    #     else:
-    #         self.insert_ask(order)
+    def send_limit_order(self, order: Order):
+        """
+        Receiving quote from MM 
+        """
+        if order.side == Side.BUY:
+            self.insert_bid(order)
+        else:
+            self.insert_ask(order)
 
     def process_market_orders(self):
         """
@@ -82,6 +82,7 @@ class BookKeeper(Agent):
 
                     self.trades.append(Trade(best_ask, vol, order.agend_id, "tbd_seller id", self.time))
                     ## need to figure out sending order filled message to agents, although ig doesn't really matter with just one MM 
+
 
                     order.quantity -= vol
                     self.ask_book[best_ask][0] -= vol
@@ -181,10 +182,17 @@ class TradingAgent(Agent):
         self.hit_bids = []
         self.hit_asks = []
 
+        self.true_value = 0 # should be "hidden"
         self.failed_orders = []
 
+    def receive_true(self, true_val):
+        self.true_value = true_val
+
     def decide_order(self, price):
-        return self.strategy.decide_order(price)
+        signal = self.strategy.decide_order(price)
+        if signal == 0:
+            return None
+        return Order(self.id, signal, price, 1)
 
     def order_failed(self, order: Order):
         """
@@ -200,6 +208,7 @@ class TradingAgent(Agent):
         side = Side.BUY if trade.buyer == self.unique_id else Side.SELL
         if side == Side.BUY:
             self.hit_bids.append(trade)
+            
         else:
             self.hit_asks.append(trade)
 
@@ -375,24 +384,26 @@ class MarketModel(Model):
         """
         self.num_agents = N
         self.schedule = RandomActivation(self)
+        self.directory = {}
         self.market_maker = MarketMaker(0, self)
+        self.directory[0] = self.market_maker
         self.time = 0
         self.book_keeper = BookKeeper(0, self)
 
         self.schedule.add(self.book_keeper)
         self.schedule.add(self.market_maker)
-        for i in range(self.num_agents):
+        for i in range(1, self.num_agents):
             agent_strategy = random.choice([RandomStrategy(), MeanReversionStrategy()])
             a = TradingAgent(i + 1, self, agent_strategy)
+            self.directory[i] = a
             self.schedule.add(a)
 
         self.running = True
 
     def step(self):
-        def step(self):
-            Parallel(n_jobs=-1, prefer="threads")(
-                delayed(agent.step)() for agent in self.schedule.agents
-            )
+        Parallel(n_jobs=-1, prefer="threads")(
+            delayed(agent.step)() for agent in self.schedule.agents
+        )
 
         self.time += 1
 
