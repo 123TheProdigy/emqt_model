@@ -4,6 +4,7 @@ from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 import numpy as np
+from scipy.optimize import fixed_point
 
 from objects import Side, Order, Trade
 
@@ -20,15 +21,19 @@ class BookKeeper(Agent):
         """
         super().__init__(unique_id, model)
         self.time = 0
+        self.asset_price = 100 # arbitrary asset price for now 
         self.bid_book = OrderedDict()
         self.ask_book = OrderedDict()
         self.market_orders = []
         self.trades = []
+        self.order_book = [self.bid_book, self.ask_book]
 
     def send_order(self, order: Order):
         """
-        Agent sends order to the market with this function
+        Trading agent sends order to the market with this function
         """
+        self.market_orders.append(order)
+        
         self.orders.append(order)
 
     def insert_bid(self, order: Order):
@@ -51,18 +56,21 @@ class BookKeeper(Agent):
             self.ask_book[order.price][0] += order.quantity
             self.ask_book[order.price][1].append(order)
 
-    def send_limit_order(self, order: Order):
-        if order.side == Side.BUY:
-            self.insert_bid(order)
-        else:
-            self.insert_ask(order)
+    # def send_limit_order(self, order: Order):
+    #     """
+    #     Move to MM agent 
+    #     """
+    #     if order.side == Side.BUY:
+    #         self.insert_bid(order)
+    #     else:
+    #         self.insert_ask(order)
 
     def process_market_orders(self):
         """
         Process all orders at end of iteration
         """
-        best_ask = self.ask_book.keys()[0]
-        best_bid = self.bid_book.keys()[0]
+        best_ask = list(self.ask_book.keys())[0]
+        best_bid = list(self.bid_book.keys())[0]
 
         ## no concurrency yet 
         for order in self.market_orders:
@@ -99,6 +107,8 @@ class BookKeeper(Agent):
         ## order clearing?
         for order in self.market_orders:
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
+            agent.order_failed(order) ## notify agent that their order failed 
+            self.market_orders.clear()
             agent.order_failed(order)  ## notify agent that their order failed
         self.orders.clear()
 
@@ -114,7 +124,14 @@ class MarketMaker(Agent):
 
         self.pnl = 0
         self.net_position = 0
-        self.trades = []
+        self.best_bids = []
+        self.best_asks = []
+
+    def send_limit_order(self, order: Order):
+        if order.side == Side.BUY:
+            self.insert_bid(order)
+        else:
+            self.insert_ask(order)  
 
     def step(self):
         demand = sum(
