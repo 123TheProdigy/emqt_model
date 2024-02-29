@@ -121,17 +121,33 @@ class MarketMaker(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
         self.price = 100.0
-
+        self.id = unique_id
+        
         self.pnl = 0
         self.net_position = 0
         self.best_bids = []
         self.best_asks = []
+
+        self.curr_bid = 0
+        self.bid_vol = 0
+        self.curr_ask = 0
+        self.ask_vol = 0
 
     def send_limit_order(self, order: Order):
         if order.side == Side.BUY:
             self.insert_bid(order)
         else:
             self.insert_ask(order)  
+
+    def receive_quote(self, quote: tuple):
+        """
+        The quote will be a tuple in the form (bid, bid_volume, ask, ask_volume)
+        """
+        self.curr_bid, self.bid_vol, self.curr_ask, self.ask_vol = quote
+        self.bid_to_post = Order(self.id, Side.BID, self.curr_bid, self.bid_vol)
+        self.ask_to_post = Order(self.id, Side.SELL, self.curr_ask, self.ask_vol)
+        self.best_bids.append(self.bid_to_post)
+        self.best_asks.append(self.ask_to_post)
 
     def step(self):
         demand = sum(
@@ -141,9 +157,12 @@ class MarketMaker(Agent):
 
 class TradingAgent(Agent):
     """
-    General trading agent; there will be two types.
-    1. Fundamentalist Trader
-    2. Trend Following Trader
+    General trading agent; there will be several types.
+    1. Uninformed noise trader
+    2. Noisy informed trader
+    3. Fully informed trader
+    4. Mean reversion trader
+    5. Momentum trader 
     This agent will interact with the market model's limit order book to place trades. 
 
     self.exchange: the bookkeeper to send trades to / receive messages from
@@ -194,6 +213,9 @@ class TradingAgent(Agent):
             self.posted_offers.append(order)
 
         self.exchange.send_order(order)
+    
+    def update_pnl(self):
+        pass
 
     def step(self):
         order = self.decide_order(self.model.market_maker.price)
@@ -201,20 +223,46 @@ class TradingAgent(Agent):
 
 
 class RandomStrategy:
-    def __init__(self, max_quantity=100):
-        self.max_quantity = max_quantity
-
     def decide_order(self, price):
-        direction = random.choice([-1, 1])
-        quantity = random.randint(1, self.max_quantity)
-        return direction, quantity
+        return random.choice([-1, 1])
+    
+class UninformedStrategy:
+    def __init__(self, eta: float):
+        """
+        Eta is the probability of a trade occuring. 
+        """
+        assert eta <= 0.5, "eta must be less than or equal to 0.5"
+        self.eta = eta
 
+    def decide_order(self):
+        np.random.choice([1, -1, 0], p=[self.eta, self.eta, 1-2*self.eta])
+
+class NoisyInformedStrategy:
+    def __init__(self, sigma_w: float):
+        self.sigma_w = sigma_w
+
+    def decide_order(self, bid, ask, true_value):
+        noisy_value = true_value + np.random.normal(0, self.sigma_noise)
+        if noisy_value > ask:
+            return 1
+        elif (bid < noisy_value) and (noisy_value < ask):
+            return 0
+        else:
+            return -1
+
+class InformedStrategy:
+    def decide_order(self, bid, ask, true_value):
+        if true_value > ask:
+            return 1
+        elif (bid < true_value) and (true_value < ask):
+            return 0
+        else:
+            return -1
 
 class MeanReversionStrategy:
-    def __init__(self, window_size=10, threshold=1.0, max_quantity=100):
+    def __init__(self, window_size=10, threshold=1.0):
         self.window_size = window_size
         self.threshold = threshold
-        self.max_quantity = max_quantity
 
     def calculate_mean(self, price_history):
         if len(price_history) < self.window_size:
@@ -226,19 +274,17 @@ class MeanReversionStrategy:
     def decide_order(self, price_history):
         mean_price = self.calculate_mean(price_history)
         if mean_price is None:
-            return 0, 0
+            return 0
 
         current_price = price_history[-1]
         deviation = current_price - mean_price
 
-        quantity = min(self.max_quantity, abs(deviation))
-
         if deviation > self.threshold:
-            return -1, quantity
+            return -1
         elif deviation < -self.threshold:
-            return 1, quantity
+            return 1
         else:
-            return 0, 0
+            return 0
 
 
 class NoiseStrategy:
@@ -249,12 +295,11 @@ class NoiseStrategy:
     or fit_parameters must be called before decide_order
     """
 
-    def __init__(self, initial_price=100.0, dt=1, max_quantity=100):
+    def __init__(self, initial_price=100.0, dt=1):
         self.volatility = None
         self.drift = None
         self.price = initial_price
         self.dt = dt
-        self.max_quantity = max_quantity
 
     def fit_parameters(self, price_history):
         """
@@ -276,14 +321,12 @@ class NoiseStrategy:
         dS = self.drift * self.price * self.dt + self.volatility * self.price * dW
         # self.price += dS
 
-        quantity = min(self.max_quantity, abs(dS))
-
         if dS > 0:
-            return 1, quantity
+            return 1
         elif dS < 0:
-            return -1, quantity
+            return -1
         else:
-            return 0, 0
+            return 0
 
 
 class MomentumStrategy:
@@ -292,10 +335,9 @@ class MomentumStrategy:
     We could also use other methods like SMA, ROC, etc.
     """
 
-    def __init__(self, window_size=10, alpha=0.1, max_quantity=100):
+    def __init__(self, window_size=10, alpha=0.1):
         self.window_size = window_size
         self.alpha = alpha  # Smoothing factor for EMA
-        self.max_quantity = max_quantity  # Maximum quantity for a single order
         self.ema = None
 
     def calculate_ema(self, price_history):
@@ -307,21 +349,19 @@ class MomentumStrategy:
 
     def decide_order(self, price_history):
         if len(price_history) < self.window_size:
-            return 0, 0  # Return zero order and quantity if there's not enough historical data
+            return 0
 
         ema = self.calculate_ema(price_history)
 
         # Calculate momentum as the difference between the current price and EMA
         momentum = price_history[-1] - ema
 
-        quantity = min(self.max_quantity, abs(momentum))
-
         if momentum > 0:
-            return 1, quantity
+            return 1
         elif momentum < 0:
-            return -1, quantity
+            return -1
         else:
-            return 0, 0
+            return 0
 
 
 class MarketModel(Model):
