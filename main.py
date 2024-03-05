@@ -28,7 +28,7 @@ class BookKeeper(Agent):
         self.trades = []
         self.order_book = [self.bid_book, self.ask_book]
 
-    def send_order(self, order: Order):
+    def receive_order(self, order: Order):
         """
         Trading agent sends order to the market with this function
         """
@@ -80,7 +80,7 @@ class BookKeeper(Agent):
                     ask_quantity, ask_orders = self.ask_book[best_ask]
                     vol = min(ask_quantity, order.quantity)
 
-                    self.trades.append(Trade(best_ask, vol, order.agend_id, "tbd_seller id", self.time))
+                    self.trades.append(Trade(best_ask, vol, order.agent_id, "market_maker", self.time))
                     ## need to figure out sending order filled message to agents, although ig doesn't really matter with just one MM 
 
 
@@ -96,7 +96,7 @@ class BookKeeper(Agent):
                     bid_quantity, bid_orders = self.bid_book[best_bid]
                     vol = min(bid_quantity, order.quantity)
 
-                    self.trades.append(Trade(best_bid, vol, order.agend_id, "tbd_buyer id", self.time))
+                    self.trades.append(Trade(best_bid, vol, order.agend_id, "market_maker", self.time))
                     ## need to figure out sending order filled message to agents
 
                     order.quantity -= vol
@@ -221,7 +221,7 @@ class TradingAgent(Agent):
         else:
             self.posted_offers.append(order)
 
-        self.exchange.send_order(order)
+        self.exchange.receive_order(order)
     
     def update_pnl(self, trade : Trade, true_val: int): 
         """
@@ -404,6 +404,7 @@ class MarketModel(Model):
         self.running = True
 
     def step(self):
+
         Parallel(n_jobs=-1, prefer="threads")(
             delayed(agent.step)() for agent in self.schedule.agents
         )

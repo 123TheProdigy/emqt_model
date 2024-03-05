@@ -300,6 +300,14 @@ class God():
         self.ema = 0 # for momentum strat 
         self.i = 0 # ITERATION # 
 
+        self.asks = [] 
+        self.bids = []
+        self.exp_value = []
+
+        self.Pbuy = None
+        self.Psell = None
+        self.Pnoorder = None
+
     def get_asset_dynamics(self):
         val = asset_dynamics(p_jump=self.proba_jump, sigma=self.sigma_price, init_price=self.V0)
         val.simulate(tmax=self.tmax)
@@ -485,28 +493,29 @@ class God():
         interaction_result: tuple(Bool, Order), bool is true if an order was placed, false if no order was placed 
                             and Order is none if no order placed
         """
+        trade_type = 0
         if interaction_result[0] == False:
-            return 0
+            trade_type = 0
         if interaction_result[1].side == Side.BUY:
-            return 1
-        return -1
+            trade_type = 1
+        trade_type = -1
+
+        self.run_and_advance(trade_type)
     
-    def run_and_advance(self, trade = 0):
+    def run_and_advance(self, trade = None):
         """
         Essentially taking a time step (such as the market model step function)
 
         Need to create senders and receivers for messages to MM and traders 
         """
-        self.v_distrib = Vi_prior(sigma_price = self.sigma, centered_at = self.V0, multiplier = self.multiplier)
+        if (self.i == 0):
+            self.v_distrib = Vi_prior(sigma_price = self.sigma, centered_at = self.V0, multiplier = self.multiplier)
 
         self.mr_indicator = self.comp_mr_indicator()
         self.mom_indicator = self.comp_mom_indicator()
 
-        self.asks = [] 
-        self.bids = []
-        self.exp_value = []
-        self.pnl = [] # shouldn't need, MM is not God
-        self.inventory = [0] # shouldn't need, MM is not God 
+        # self.pnl = [] # shouldn't need, MM is not God
+        # self.inventory = [0] # shouldn't need, MM is not God 
 
         if self.jumps[self.i] == 1:
             self.v_distrib.reset(centered_at=self.exp_value[-1])
@@ -527,35 +536,32 @@ class God():
         curr_bid += -self.extend_spread ## extend spread
         self.bids.append(curr_bid)
 
-        Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
+        self.Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                           mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, sigma_w=self.sigma_w, 
                           vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
-        assert Pbuy>0-self.eps and Pbuy<1+self.eps, "Pbuy not between 0 and 1"
+        assert self.Pbuy>0-self.eps and self.Pbuy<1+self.eps, "Pbuy not between 0 and 1"
         
-        Psell = self.P_sell(Pb=self.bids[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, theta=self.theta, 
+        self.Psell = self.P_sell(Pb=self.bids[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, theta=self.theta, 
                             mr=self.mr_indicator, mom=self.mom_indicator, eta = self.eta, sigma_w=self.sigma_w, 
                             vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
-        assert Psell>0-self.eps and Psell<1+self.eps, "Psell not between 0 and 1"
+        assert self.Psell>0-self.eps and self.Psell<1+self.eps, "Psell not between 0 and 1"
         
-        Pnoorder = self.P_no_order(Pb=self.bids[-1], Pa=self.asks[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, 
+        self.Pnoorder = self.P_no_order(Pb=self.bids[-1], Pa=self.asks[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, 
                                    theta=self.theta, mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, 
                                    sigma_w=self.sigma_w, vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
-        assert Pnoorder>0-self.eps and Pnoorder<1+self.eps, "P_noorder not between 0 and 1"
+        assert self.Pnoorder>0-self.eps and self.Pnoorder<1+self.eps, "P_noorder not between 0 and 1"
 
-        assert Psell+Pbuy+Pnoorder>0-self.eps and Pbuy +Psell+Pnoorder<1+self.eps
+        assert self.Psell+self.Pbuy+self.Pnoorder>0-self.eps and self.Pbuy +self.Psell+self.Pnoorder<1+self.eps
 
-        self.exp_value.append(self.compute_exp_true_value(Pb=self.bids[-1], Pa=self.asks[-1], psell=Psell, pbuy=Pbuy, 
+        self.exp_value.append(self.compute_exp_true_value(Pb=self.bids[-1], Pa=self.asks[-1], psell=self.P_sell, pbuy=self.P_buy, 
                                                           vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v, 
                                                           alpha=self.alpha, eta=self.eta, sigma_w=self.sigma_w))
-        
-
-        
-        trade = trade # SHOULD BE RETURNED TRADES FROM PERSPECTIVE OF MM 
-
-        self.v_distrib.compute_posterior(trade, Pbuy=Pbuy, Psell=Psell, Pno=Pnoorder, Pa=self.asks[-1], Pb=self.bids[-1], 
-                                         alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
-                                         mr_true=self.mr_indicator, mom_true=self.mom_indicator, eta=self.eta, 
-                                         sigma_w=self.sigma_w, update_prior=True)
+    
+        if trade is not None:
+            self.v_distrib.compute_posterior(trade, Pbuy=self.Pbuy, Psell=self.Psell, Pno=self.Pnoorder, Pa=self.asks[-1], Pb=self.bids[-1], 
+                                            alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
+                                            mr_true=self.mr_indicator, mom_true=self.mom_indicator, eta=self.eta, 
+                                            sigma_w=self.sigma_w, update_prior=True)
 
         assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
 
