@@ -223,7 +223,10 @@ class TradingAgent(Agent):
 
         self.exchange.send_order(order)
     
-    def update_pnl(self):
+    def update_pnl(self, trade : Trade, true_val: int): 
+        """
+        This will depend a decent amount on control flow because the true value from God needs to be passed in 
+        """
         pass
 
     def step(self):
