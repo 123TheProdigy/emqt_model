@@ -6,6 +6,7 @@ from scipy.stats import norm
 import math
 from scipy.optimize import fixed_point
 from main import UninformedStrategy, NoiseStrategy, InformedStrategy
+import matplotlib.pyplot as plt
 
 Time = int
 Symbol = str
@@ -567,3 +568,54 @@ class God():
         assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
 
         self.i += 1
+
+    def show_result(self, 
+                    figsize:Optional[tuple]=(10,9),
+                    dpi:Optional[int]=100, 
+                    same_y_axis_above:Optional[bool]=True):
+        '''
+        This methods shows plots of:
+            - the true value and the expected value over time
+            - bid/ask prices over time
+            - spread over time
+            - MM true value distribution at 3 different iterations
+        '''
+
+
+        fig, ax = plt.subplots(2,2, figsize=(figsize[0],figsize[1]), dpi=dpi)
+
+        bids=np.array(self.bids)
+        asks=np.array(self.asks)
+        
+
+        ax[0, 1].plot(self.bids, label="bid price", alpha=0.8)
+        ax[0, 1].plot(self.asks, label="ask price", alpha=0.8)
+        ax[0,1].legend()
+        ax[0,1].set_xlabel("time t")
+
+        ax[0,0].plot(self.true_value, label="True value", alpha=0.8)
+        ax[0,0].set_ylabel("asset value")
+        ax[0,0].plot(self.exp_value, label="Exp. value", alpha=0.8)
+        ax[0,0].legend()
+        if same_y_axis_above:
+            ax[0,0].set_ylim(ax[0,1].get_ylim())
+        ax[0,0].set_xlabel("time t")
+
+        # ax[1,0].plot((asks-bids)/(0.5*(asks+bids)), label="spread")
+        ax[1,0].plot((asks-bids), label="asbolute spread", alpha=0.8)
+
+        ax[1,0].set_xlabel("time t")
+        ax[0,1].set_ylabel("bid/ask")
+        ax[1,0].set_ylabel("absolute spread")
+
+        #snapshots_i = (int(self.tmax/3), int(2*self.tmax/3), int(3*self.tmax/3-2))
+        snapshots_i = [3,6,9]
+        for snap in snapshots_i:
+            ax[1,1].plot(self.v_distrib.v_history[snap], self.v_distrib.p_history[snap], label=f"iter: {snap}", alpha=0.8)
+        ax[1,1].legend()
+        ax[1,1].set_xlabel("true values")
+        ax[1,1].set_ylabel("count (normalized)")
+
+        fig.tight_layout()
+
+        plt.show()
