@@ -65,6 +65,10 @@ class BookKeeper(Agent):
         else:
             self.insert_ask(order)
 
+    def clear_limit_book(self):
+        self.bid_book = OrderedDict()
+        self.ask_book = OrderedDict()
+
     def process_market_orders(self):
         """
         Process all orders at end of iteration
