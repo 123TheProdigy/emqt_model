@@ -4,7 +4,6 @@ from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 import numpy as np
-from scipy.optimize import fixed_point
 
 from objects import Side, Order, Trade, God
 
@@ -33,8 +32,6 @@ class BookKeeper(Agent):
         Trading agent sends order to the market with this function
         """
         self.market_orders.append(order)
-        
-        self.orders.append(order)
 
     def insert_bid(self, order: Order):
         keys_to_move = [k for k in self.bid_book if k < order.price]
@@ -85,8 +82,8 @@ class BookKeeper(Agent):
                     vol = min(ask_quantity, order.quantity)
 
                     self.trades.append(Trade(best_ask, vol, order.agent_id, "market_maker", self.time))
-                    ## need to figure out sending order filled message to agents, although ig doesn't really matter with just one MM 
-
+                    agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
+                    agent.order_filled(order)
 
                     order.quantity -= vol
                     self.ask_book[best_ask][0] -= vol
@@ -101,7 +98,8 @@ class BookKeeper(Agent):
                     vol = min(bid_quantity, order.quantity)
 
                     self.trades.append(Trade(best_bid, vol, order.agend_id, "market_maker", self.time))
-                    ## need to figure out sending order filled message to agents
+                    agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
+                    agent.order_filled(order)
 
                     order.quantity -= vol
                     self.bid_book[best_bid][0] -= vol
@@ -113,9 +111,7 @@ class BookKeeper(Agent):
         for order in self.market_orders:
             agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
             agent.order_failed(order) ## notify agent that their order failed 
-            self.market_orders.clear()
-            agent.order_failed(order)  ## notify agent that their order failed
-        self.orders.clear()
+        self.market_orders.clear()
 
     def step(self):
         # clears orders that are able to be fulfilled?
@@ -243,6 +239,9 @@ class TradingAgent(Agent):
 
 
 class RandomStrategy:
+    def __init__(self):
+        pass
+
     def decide_order(self, price):
         return random.choice([-1, 1])
     
@@ -271,6 +270,9 @@ class NoisyInformedStrategy:
             return -1
 
 class InformedStrategy:
+    def __init__(self):
+        pass
+
     def decide_order(self, bid, ask, true_value):
         if true_value > ask:
             return 1
@@ -315,10 +317,9 @@ class NoiseStrategy:
     or fit_parameters must be called before decide_order
     """
 
-    def __init__(self, initial_price=100.0, dt=1):
+    def __init__(self, dt=1):
         self.volatility = None
         self.drift = None
-        self.price = initial_price
         self.dt = dt
 
     def fit_parameters(self, price_history):
