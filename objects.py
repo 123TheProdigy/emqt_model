@@ -496,9 +496,10 @@ class God():
         trade_type = 0
         if interaction_result[0] == False:
             trade_type = 0
-        if interaction_result[1].side == Side.BUY:
+        elif interaction_result[1].side == Side.BUY:
             trade_type = 1
-        trade_type = -1
+        else:
+            trade_type = -1
 
         self.run_and_advance(trade_type)
     
