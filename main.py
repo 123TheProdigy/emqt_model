@@ -65,6 +65,10 @@ class BookKeeper(Agent):
         else:
             self.insert_ask(order)
 
+    def clear_limit_book(self):
+        self.bid_book = OrderedDict()
+        self.ask_book = OrderedDict()
+
     def process_market_orders(self):
         """
         Process all orders at end of iteration
@@ -404,7 +408,6 @@ class MarketModel(Model):
         self.running = True
 
     def step(self):
-
         Parallel(n_jobs=-1, prefer="threads")(
             delayed(agent.step)() for agent in self.schedule.agents
         )
