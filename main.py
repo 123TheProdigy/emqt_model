@@ -6,7 +6,7 @@ from collections import OrderedDict
 import numpy as np
 from scipy.optimize import fixed_point
 
-from objects import Side, Order, Trade
+from objects import Side, Order, Trade, God
 
 
 class BookKeeper(Agent):
@@ -56,7 +56,7 @@ class BookKeeper(Agent):
             self.ask_book[order.price][0] += order.quantity
             self.ask_book[order.price][1].append(order)
 
-    def send_limit_order(self, order: Order):
+    def receive_limit_order(self, order: Order):
         """
         Receiving quote from MM 
         """
@@ -123,6 +123,7 @@ class MarketMaker(Agent):
         super().__init__(unique_id, model)
         self.price = 100.0
         self.id = unique_id
+        self.book_keeper = model.book_keeper
         
         self.pnl = 0
         self.net_position = 0
@@ -151,9 +152,9 @@ class MarketMaker(Agent):
         self.best_asks.append(self.ask_to_post)
 
     def step(self):
-        demand = sum(
-            agent.decide_order(self.price) for agent in self.model.schedule.agents if isinstance(agent, TradingAgent))
-        self.price += 0.1 * demand
+        self.book_keeper.receive_limit_order(self.bid_to_post)
+        self.book_keeper.receive_limit_order(self.ask_to_post)
+        self.book_keeper.process_market_orders()
 
 
 class TradingAgent(Agent):
@@ -169,10 +170,10 @@ class TradingAgent(Agent):
     self.exchange: the bookkeeper to send trades to / receive messages from
     """
 
-    def __init__(self, unique_id, model, strategy, bookkeeper: BookKeeper):
+    def __init__(self, unique_id, model, strategy):
         super().__init__(unique_id, model)
 
-        self.exchange = bookkeeper
+        self.exchange = model.book_keeper
 
         self.strategy = strategy
         self.position = 0
@@ -200,6 +201,7 @@ class TradingAgent(Agent):
         """
         self.failed_orders.append(order)
         print(f'Order {order} was not filled.')
+        self.model.god.receive_trade((False, None))
 
     def order_filled(self, trade: Trade):
         """
@@ -211,6 +213,7 @@ class TradingAgent(Agent):
             
         else:
             self.hit_asks.append(trade)
+        self.model.god.receive_trade((True, trade))
 
     def send_order(self, order):
         """
@@ -222,6 +225,7 @@ class TradingAgent(Agent):
             self.posted_offers.append(order)
 
         self.exchange.receive_order(order)
+        self.exchange.process_market_orders()
     
     def update_pnl(self, trade : Trade, true_val: int): 
         """
@@ -402,13 +406,15 @@ class MarketModel(Model):
             self.schedule.add(a)
 
         self.running = True
+        self.god = God(tmax=200, sigma=0.5, jump_prob=0.005, alpha=0.5, beta=0.5, rho=0, theta=0,
+                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.05, V0=100)
 
     def step(self):
-
+        self.god.run_and_advance()
+        self.market_maker.step()
         Parallel(n_jobs=-1, prefer="threads")(
             delayed(agent.step)() for agent in self.schedule.agents
         )
-
         self.time += 1
 
 
