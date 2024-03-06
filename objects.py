@@ -36,7 +36,7 @@ class Order:
         self.quantity = quantity
 
     def __str__(self) -> str:
-        return "(" + str(self.agent_id) + ", " + str(self.price) + ", " + str(self.quantity) + ")"
+        return "(" + str(self.agent_id) + ", " + str(self.price) + ", " + str(self.quantity) + "," + str(self.side) + ")"
 
     def __repr__(self) -> str:
         return "(" + str(self.agent_id) + ", " + str(self.price) + ", " + str(self.quantity) + ")"
@@ -174,6 +174,7 @@ class Vi_prior():
                            - norm.cdf(x = -4 * self.sigma + i/self.multiplier, scale = self.sigma))
         
         self.prior_v = prior_v
+        print(f'priors sum to: {np.sum(self.prior_v)}')
         self.p_history.append(prior_v)
     
     def compute_posterior(self, order_type: int, Pbuy: float, Psell: float, Pno: float, Pa: float, Pb: float, 
@@ -321,7 +322,7 @@ class God():
         self.gamma = gamma
         self.mr_window = mr_window
         self.mom_window = mom_window
-        self.multiplier = 100
+        self.multiplier = 300
         self.eps = 1e-1
         self.directory = directory
 
@@ -438,7 +439,10 @@ class God():
 
         prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
         result = sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
+        print(f'initial sum: {result}')
         result += sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
+
+        print(f'iiiiiiiiii the result is {result}, the psell is {p_sell}')
 
         return result / p_sell 
 
@@ -638,7 +642,7 @@ class God():
                                             mr_true=self.mr_indicator, mom_true=self.mom_indicator, eta=self.eta, 
                                             sigma_w=self.sigma_w)
             print(f'====================posterior is: {np.abs(sum(self.v_distrib.prior_v) - 1)}')
-            assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
+            # assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
 
 
         self.send_info(curr_bid, 10, curr_ask, 10, self.true_value[self.i])

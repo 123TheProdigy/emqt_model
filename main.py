@@ -85,7 +85,7 @@ class BookKeeper(Agent):
         
         ## no concurrency yet 
         for order in self.market_orders:
-            print(f'market order: {order}')
+            print(f'market order: {order} with side {order.side}')
             if order.side == Side.BUY:
                 while order.quantity > 0 and self.ask_book:
                     best_ask = next(iter(self.ask_book.keys()))
@@ -95,6 +95,7 @@ class BookKeeper(Agent):
                     self.trades.append(Trade(best_ask, vol, order.agent_id, "market_maker", self.time))
                     agent = self.directory[order.agent_id]
                     agent.order_filled(self.trades[-1], order)
+                    print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 1')
                     print(f'order has been filled at {best_ask}')
 
                     order.quantity -= vol
@@ -109,9 +110,10 @@ class BookKeeper(Agent):
                     bid_quantity, bid_orders = self.bid_book[best_bid]
                     vol = min(bid_quantity, order.quantity)
 
-                    self.trades.append(Trade(best_bid, vol, order.agend_id, "market_maker", self.time))
+                    self.trades.append(Trade(best_bid, vol, order.agent_id, "market_maker", self.time))
                     agent = self.directory[order.agent_id]
                     agent.order_filled(self.trades[-1], order)
+                    print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 2')
                     print(f'order has been filled at {best_bid}')
 
                     order.quantity -= vol
@@ -212,6 +214,8 @@ class TradingAgent(Agent):
             signal = self.strategy.decide_order()
         elif isinstance(self.strategy, NoisyInformedStrategy) or isinstance(self.strategy, InformedStrategy):
             signal = self.strategy.decide_order(self.mm.curr_bid, self.mm.curr_ask, self.true_value)
+
+        print(f'-----------------the signal is {signal}')
         if signal == 0:
             return None
         if signal == 1:
@@ -280,7 +284,7 @@ class UninformedStrategy:
         self.eta = eta
 
     def decide_order(self):
-        np.random.choice([1, -1, 0], p=[self.eta, self.eta, 1-2*self.eta])
+        return np.random.choice([1, -1, 0], p=[self.eta, self.eta, 1-2*self.eta])
 
 class NoisyInformedStrategy:
     def __init__(self, sigma_w: float):
@@ -432,7 +436,7 @@ class MarketModel(Model):
         self.schedule.add(self.market_maker)
         for i in range(1, self.num_agents):
             agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
-            a = TradingAgent(i + 1, self, agent_strategy)
+            a = TradingAgent(i, self, agent_strategy)
             self.directory[i] = a
             self.schedule.add(a)
 
@@ -454,7 +458,7 @@ def collect_price(model):
     return model.market_maker.price
 
 
-model = MarketModel(10)
+model = MarketModel(3)
 for i in range(5):
     print("Step number: ", i)
     model.step()
