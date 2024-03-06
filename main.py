@@ -27,6 +27,9 @@ class BookKeeper(Agent):
         self.trades = []
         self.order_book = [self.bid_book, self.ask_book]
 
+    def get_directory(self, directory : dict):
+        self.directory = directory
+
     def receive_order(self, order: Order):
         """
         Trading agent sends order to the market with this function
@@ -73,8 +76,16 @@ class BookKeeper(Agent):
         best_ask = list(self.ask_book.keys())[0]
         best_bid = list(self.bid_book.keys())[0]
 
+        for key, val in self.directory.items():
+            if key == 0:
+                continue
+            val.prices.append((best_bid + best_ask)/2)
+            val.bid = best_bid
+            val.ask = best_ask
+        
         ## no concurrency yet 
         for order in self.market_orders:
+            print(f'market order: {order}')
             if order.side == Side.BUY:
                 while order.quantity > 0 and self.ask_book:
                     best_ask = next(iter(self.ask_book.keys()))
@@ -82,8 +93,9 @@ class BookKeeper(Agent):
                     vol = min(ask_quantity, order.quantity)
 
                     self.trades.append(Trade(best_ask, vol, order.agent_id, "market_maker", self.time))
-                    agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
-                    agent.order_filled(order)
+                    agent = self.directory[order.agent_id]
+                    agent.order_filled(self.trades[-1], order)
+                    print(f'order has been filled at {best_ask}')
 
                     order.quantity -= vol
                     self.ask_book[best_ask][0] -= vol
@@ -98,8 +110,9 @@ class BookKeeper(Agent):
                     vol = min(bid_quantity, order.quantity)
 
                     self.trades.append(Trade(best_bid, vol, order.agend_id, "market_maker", self.time))
-                    agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
-                    agent.order_filled(order)
+                    agent = self.directory[order.agent_id]
+                    agent.order_filled(self.trades[-1], order)
+                    print(f'order has been filled at {best_bid}')
 
                     order.quantity -= vol
                     self.bid_book[best_bid][0] -= vol
@@ -109,7 +122,7 @@ class BookKeeper(Agent):
 
         ## order clearing?
         for order in self.market_orders:
-            agent = next(agent for agent in self.schedule.agents if agent.unique_id == order.agent_id)
+            agent = self.directory[order.agent_id]
             agent.order_failed(order) ## notify agent that their order failed 
         self.market_orders.clear()
 
@@ -119,11 +132,11 @@ class BookKeeper(Agent):
 
 
 class MarketMaker(Agent):
-    def __init__(self, unique_id, model):
+    def __init__(self, unique_id, model, book):
         super().__init__(unique_id, model)
         self.price = 100.0
         self.id = unique_id
-        self.book_keeper = model.book_keeper
+        self.book_keeper = book
         
         self.pnl = 0
         self.net_position = 0
@@ -146,14 +159,14 @@ class MarketMaker(Agent):
         The quote will be a tuple in the form (bid, bid_volume, ask, ask_volume)
         """
         self.curr_bid, self.bid_vol, self.curr_ask, self.ask_vol = quote
-        self.bid_to_post = Order(self.id, Side.BID, self.curr_bid, self.bid_vol)
+        self.bid_to_post = Order(self.id, Side.BUY, self.curr_bid, self.bid_vol)
         self.ask_to_post = Order(self.id, Side.SELL, self.curr_ask, self.ask_vol)
         self.best_bids.append(self.bid_to_post)
         self.best_asks.append(self.ask_to_post)
 
     def step(self):
-        self.book_keeper.receive_limit_order(self.bid_to_post)
-        self.book_keeper.receive_limit_order(self.ask_to_post)
+        self.book_keeper.receive_limit_order(self.best_bids[-1])
+        self.book_keeper.receive_limit_order(self.best_asks[-1])
         self.book_keeper.process_market_orders()
 
 
@@ -174,7 +187,7 @@ class TradingAgent(Agent):
         super().__init__(unique_id, model)
 
         self.exchange = model.book_keeper
-
+        self.mm = model.market_maker
         self.strategy = strategy
         self.position = 0
         self.pnl = 0
@@ -182,6 +195,9 @@ class TradingAgent(Agent):
         self.posted_offers = []
         self.hit_bids = []
         self.hit_asks = []
+        self.prices = []
+        self.bid = None
+        self.ask = None
 
         self.true_value = 0 # should be "hidden"
         self.failed_orders = []
@@ -189,21 +205,29 @@ class TradingAgent(Agent):
     def receive_true(self, true_val):
         self.true_value = true_val
 
-    def decide_order(self, price):
-        signal = self.strategy.decide_order(price)
+    def decide_order(self):
+        if self.strategy is RandomStrategy or self.strategy is MomentumStrategy or self.strategy is NoiseStrategy or self.strategy is MeanReversionStrategy:
+            signal = self.strategy.decide_order(self.prices)
+        elif isinstance(self.strategy, UninformedStrategy):
+            signal = self.strategy.decide_order()
+        elif isinstance(self.strategy, NoisyInformedStrategy) or isinstance(self.strategy, InformedStrategy):
+            signal = self.strategy.decide_order(self.mm.curr_bid, self.mm.curr_ask, self.true_value)
         if signal == 0:
             return None
-        return Order(self.id, signal, price, 1)
+        if signal == 1:
+            return Order(self.unique_id, signal, self.mm.curr_ask, 1)
+        else:
+            return Order(self.unique_id, signal, self.mm.curr_bid, 1)
 
     def order_failed(self, order: Order):
         """
         If the bookkeeper fails to fill an order, we note that it failed 
         """
         self.failed_orders.append(order)
-        print(f'Order {order} was not filled.')
+        # print(f'Order {order} was not filled.')
         self.model.god.receive_trade((False, None))
 
-    def order_filled(self, trade: Trade):
+    def order_filled(self, trade: Trade, order: Order):
         """
         If an order is filled by the bookkeeper, then we receive a notification and add it to our trade history 
         """
@@ -213,7 +237,7 @@ class TradingAgent(Agent):
             
         else:
             self.hit_asks.append(trade)
-        self.model.god.receive_trade((True, trade))
+        self.model.god.receive_trade((True, trade, order))
 
     def send_order(self, order):
         """
@@ -234,8 +258,10 @@ class TradingAgent(Agent):
         pass
 
     def step(self):
-        order = self.decide_order(self.model.market_maker.price)
-        self.model.market_maker.price += order * 0.1
+        order = self.decide_order()
+        if order is not None:
+            self.send_order(order)
+        # self.model.market_maker.price += order * 0.1
 
 
 class RandomStrategy:
@@ -261,7 +287,7 @@ class NoisyInformedStrategy:
         self.sigma_w = sigma_w
 
     def decide_order(self, bid, ask, true_value):
-        noisy_value = true_value + np.random.normal(0, self.sigma_noise)
+        noisy_value = true_value + np.random.normal(0, self.sigma_w)
         if noisy_value > ask:
             return 1
         elif (bid < noisy_value) and (noisy_value < ask):
@@ -397,22 +423,23 @@ class MarketModel(Model):
         self.num_agents = N
         self.schedule = RandomActivation(self)
         self.directory = {}
-        self.market_maker = MarketMaker(0, self)
-        self.directory[0] = self.market_maker
         self.time = 0
         self.book_keeper = BookKeeper(0, self)
+        self.market_maker = MarketMaker(0, self, self.book_keeper)
+        self.directory[0] = self.market_maker
 
         self.schedule.add(self.book_keeper)
         self.schedule.add(self.market_maker)
         for i in range(1, self.num_agents):
-            agent_strategy = random.choice([RandomStrategy(), MeanReversionStrategy()])
+            agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
             a = TradingAgent(i + 1, self, agent_strategy)
             self.directory[i] = a
             self.schedule.add(a)
 
+        self.book_keeper.get_directory(self.directory)
         self.running = True
-        self.god = God(tmax=200, sigma=0.5, jump_prob=0.005, alpha=0.5, beta=0.5, rho=0, theta=0,
-                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.05, V0=100)
+        self.god = God(tmax=100, sigma=0.5, jump_prob=0.1, alpha=0.5, beta=0.5, rho=0, theta=0,
+                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.05, V0=100, directory=self.directory)
 
     def step(self):
         self.god.run_and_advance()
@@ -427,7 +454,8 @@ def collect_price(model):
     return model.market_maker.price
 
 
-model = MarketModel(2)
-for i in range(100):
+model = MarketModel(10)
+for i in range(5):
+    print("Step number: ", i)
     model.step()
-    print("Price:", collect_price(model))
+    # print("Price:", collect_price(model))

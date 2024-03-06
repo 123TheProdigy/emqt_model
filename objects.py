@@ -5,7 +5,7 @@ import enum
 from scipy.stats import norm
 import math
 from scipy.optimize import fixed_point
-from main import UninformedStrategy, NoiseStrategy, InformedStrategy
+# from main import NoiseStrategy, InformedStrategy
 import matplotlib.pyplot as plt
 
 Time = int
@@ -36,10 +36,10 @@ class Order:
         self.quantity = quantity
 
     def __str__(self) -> str:
-        return "(" + self.agent_id + ", " + str(self.price) + ", " + str(self.quantity) + ")"
+        return "(" + str(self.agent_id) + ", " + str(self.price) + ", " + str(self.quantity) + ")"
 
     def __repr__(self) -> str:
-        return "(" + self.agent_id + ", " + str(self.price) + ", " + str(self.quantity) + ")"
+        return "(" + str(self.agent_id) + ", " + str(self.price) + ", " + str(self.quantity) + ")"
     
 class Trade:
     """
@@ -52,20 +52,20 @@ class Trade:
         self.seller = seller
         self.time = time
 
-    def __str__(self) -> str:
-        return "(" + self.buyer + " << " + self.seller + ", " + str(self.price) + ", " + str(
-            self.quantity) + ")"
+    # def __str__(self) -> str:
+    #     return "(" + self.buyer + " << " + self.seller + ", " + str(self.price) + ", " + str(
+    #         self.quantity) + ")"
 
-    def __repr__(self) -> str:
-        return "(" + self.buyer + " << " + self.seller + ", " + str(self.price) + ", " + str(
-            self.quantity) + ")"
+    # def __repr__(self) -> str:
+    #     return "(" + self.buyer + " << " + self.seller + ", " + str(self.price) + ", " + str(
+    #         self.quantity) + ")"
     
 
 class MMTrade(Trade):
     """
     A subclass of Trade to store more data concerning the order book at trade time 
     """
-    def __init__(self, trade : Trade, order_book: List[Dict, Dict]):
+    def __init__(self, trade : Trade, order_book):
         super().__init__(trade.price, trade. quantity, trade.buyer, trade.seller, trade.time)
         self.order_book = order_book
 
@@ -121,7 +121,7 @@ class Vi_prior():
     the priors. The i-th value inside this vector is the CDF of N(0, sigma) based on i. 
     """
 
-    def __init__(self, sigma: float, centered_at: float, multiplier: int = 1):
+    def __init__(self, sigma: float, centered_at: float, multiplier: int = 100):
         """
         sigma: the std of jump 
         centered_at: value around which the discrete vector of probabilities is centered (can be initialized to true value at t=0)
@@ -154,7 +154,7 @@ class Vi_prior():
     
     def compute_vec_v(self):
         """
-        Create vector of range of possible values the asset may have. The 4 used in the calculations represents the number of std
+        Create vector of possible V_i. The 4 used in the calculations represents the number of std
         """
         vec_v = []
         for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
@@ -166,7 +166,7 @@ class Vi_prior():
 
     def compute_prior_v(self):
         """
-        Create vector of prior probabilities P(V=Vi) from CDF of gaussian with mean 0, std sigma
+        Create vector of priors P(V=Vi) from CDF of gaussian with mean 0, std sigma
         """
         prior_v = []
         for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
@@ -210,24 +210,52 @@ class Vi_prior():
         assert Pb < Pa, "ERROR: ask price is below bid price"
         post = []
 
+        # if order_type == 1:
+        #     for i, v in enumerate(self.vec_v):
+        #         post.append(scale * self.prior_v[i] * (beta * eta + alpha * (1 - norm.cdf(x = Pa-v, scale = sigma_w) + rho * mr_true + theta * mom_true)))
+        #     post = np.array(post)/Pbuy
+
+        # elif order_type == -1:
+        #     for i, v in enumerate(self.vec_v):
+        #         post.append(scale * self.prior_v[i] * (beta * eta + alpha * norm.cdf(x = Pb-v, scale = sigma_w) + rho * mr_true + theta * mom_true))
+        #     post = np.array(post)/Psell
+
+        # else:
+        #     for i, v in enumerate(self.vec_v):
+        #         post.append(self.prior_v[i] * ((1 - 2*eta) * beta + alpha * (norm.cdf(x = Pa-v, scale = sigma_w) - norm.cdf(x = Pb-v, scale = sigma_w)) + rho * mr_true + theta * mom_true))
+        #     post = np.array(post)/Pno
+
+        # self.prior_v = post
+        # self.p_history.append(post)
+        # self.v_history.append(self.vec_v)
+
         if order_type == 1:
+
             for i, v in enumerate(self.vec_v):
-                post.append(scale * self.prior_v[i] * (beta * eta + alpha * (1 - norm.cdf(x = Pa-v, scale = sigma_w) + rho * mr_true + theta * mom_true)))
+                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
+
             post = np.array(post)/Pbuy
 
+        
         elif order_type == -1:
+
             for i, v in enumerate(self.vec_v):
-                post.append(scale * self.prior_v[i] * (beta * eta + alpha * norm.cdf(x = Pb-v, scale = sigma_w) + rho * mr_true + theta * mom_true))
+                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
+
             post = np.array(post)/Psell
 
         else:
+
             for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i] * ((1 - 2*eta) * beta + alpha * (norm.cdf(x = Pa-v, scale = sigma_w) - norm.cdf(x = Pb-v, scale = sigma_w)) + rho * mr_true + theta * mom_true))
+                post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
+
             post = np.array(post)/Pno
 
         self.prior_v = post
         self.p_history.append(post)
         self.v_history.append(self.vec_v)
+
+        # print(f'-------------------------Inside posterior: {post}')
 
         return post
 
@@ -262,6 +290,7 @@ class God():
         eta: probability an uninformed trader places a buy/sell order
         sigma_w: std of noisy informed trader (normal)
         V0: true initial value
+        directory: map of agents 
         extend_spread: amount to 1. add to ask 2. remove from bid (o/w will steer towards zero profit for MM)
         gamma: inventory control coefficient for MM profiteering 
         
@@ -274,7 +303,7 @@ class God():
         V0
     """
     def __init__(self, tmax: int, sigma: float, jump_prob: float, alpha: float, beta: float, rho: float, theta: float, 
-                 mr_thresh: float, mom_thresh: float, eta: float, sigma_w: float, V0: float, extend_spread: Optional[float] = 0, 
+                 mr_thresh: float, mom_thresh: float, eta: float, sigma_w: float, V0: float, directory: Dict, extend_spread: Optional[float] = 0, 
                  gamma: Optional[float] = 0, mr_window: Optional[int] = 10, mom_window: Optional[int] = 10):
         self.tmax = tmax
         self.sigma = sigma
@@ -292,8 +321,9 @@ class God():
         self.gamma = gamma
         self.mr_window = mr_window
         self.mom_window = mom_window
-        self.multiplier = 1
-        self.eps = 1e-8
+        self.multiplier = 100
+        self.eps = 1e-1
+        self.directory = directory
 
         self.jumps, self.true_value = self.get_asset_dynamics()
         self.midpoint = self.true_value[0] # initialize LOB midpoint as true price for iteration 1
@@ -310,7 +340,7 @@ class God():
         self.Pnoorder = None
 
     def get_asset_dynamics(self):
-        val = asset_dynamics(p_jump=self.proba_jump, sigma=self.sigma_price, init_price=self.V0)
+        val = asset_dynamics(p_jump=self.jump_prob, sigma=self.sigma, init_price=self.V0)
         val.simulate(tmax=self.tmax)
 
         return val.dynamics["jumps"].to_list(), val.price(tmax=self.tmax).to_list() 
@@ -324,13 +354,18 @@ class God():
         vec_v: vector of possible values for V_i
         v_prior: prior probability of V = V_i
         """
-        result = 0
+        # result = 0
+        # for i, v in enumerate(vec_v):
+        #     if v <= Pa:
+        #         result += (alpha * (1 - norm.cdf(Pa - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
+        #     else:
+        #         result += (alpha * norm.cdf(v - Pa, scale = sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
+    
+        result = (1-alpha)*eta
         for i, v in enumerate(vec_v):
-            if v <= Pa:
-                result += (alpha * (1 - norm.cdf(Pa - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
-            else:
-                result += (alpha * norm.cdf(v - Pa, scale = sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
-        return result * self.sizing_factor()
+            result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
+
+        return result 
 
     def P_sell(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
                vec_v: list, v_prior: list) -> float:
@@ -340,14 +375,21 @@ class God():
         Pb: bid price to calculate probability of sell order occuring 
         vec_v: vector of possible values for V_i
         v_prior: prior probability of V = V_i
+
+        got rid of sizing factor from here
         """
-        result = 0
+        # result = 0
+        # for i, v in enumerate(vec_v):
+        #     if v >= Pb:
+        #         result += (alpha * (1 - norm.cdf(Pb - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
+        #     else:
+        #         result += (alpha * norm.cdf(v - Pb, scale=self.sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
+
+        result = (1-alpha)*eta
         for i, v in enumerate(vec_v):
-            if v >= Pb:
-                result += (alpha * (1 - norm.cdf(Pb - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
-            else:
-                result += (alpha * norm.cdf(v - Pb, scale=self.sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
-        return result * self.sizing_factor()
+            result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
+
+        return result 
 
     def P_no(self, Pb: float, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
              vec_v: float, v_prior: float):
@@ -384,14 +426,20 @@ class God():
         vec_v = np.array(vec_v)
         v_prior = np.array(v_prior)
         
-        cdf_values_below = norm.cdf(Pb - vec_v, scale = sigma_w)
-        cdf_values_above = 1 - cdf_values_below ## fixed version 
+        # cdf_values_below = norm.cdf(Pb - vec_v, scale = sigma_w)
+        # cdf_values_above = 1 - cdf_values_below ## fixed version 
 
-        mask_below, mask_above = vec_v <= Pb, vec_v > Pb
-        expected_value_below = np.sum((beta * eta + alpha * cdf_values_below[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
-        expected_value_above = np.sum((beta * eta + alpha * cdf_values_above[mask_above]) * vec_v[mask_above] * v_prior[mask_above] + rho * mr + theta * mom)
+        # mask_below, mask_above = vec_v <= Pb, vec_v > Pb
+        # expected_value_below = np.sum((beta * eta + alpha * cdf_values_below[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
+        # expected_value_above = np.sum((beta * eta + alpha * cdf_values_above[mask_above]) * vec_v[mask_above] * v_prior[mask_above] + rho * mr + theta * mom)
 
-        result = expected_value_below + expected_value_above
+        # print(f'INSIDE PB_FP THE P_BUY IS {p_sell}, EV BELOW IS {expected_value_below}, EV ABOVE IS {expected_value_above}')
+        # result = expected_value_below + expected_value_above
+
+        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
+        result = sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
+        result += sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
+
         return result / p_sell 
 
     def Pa_fp(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
@@ -409,14 +457,20 @@ class God():
         vec_v = np.array(vec_v)
         v_prior = np.array(v_prior)
 
-        cdf_values_below =  norm.cdf(Pa - vec_v, scale = sigma_w)
-        cdf_values_above = 1 - cdf_values_below
+        # cdf_values_below =  norm.cdf(Pa - vec_v, scale = sigma_w)
+        # cdf_values_above = 1 - cdf_values_below
 
-        mask_below, mask_above = vec_v <= Pa, vec_v > Pa
-        expected_value_below = np.sum((beta * eta + alpha * cdf_values_above[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
-        expected_value_above = np.sum((beta * eta + alpha * cdf_values_below[mask_above]) * vec_v[mask_above] * v_prior[mask_above] + rho * mr + theta * mom)
+        # mask_below, mask_above = vec_v <= Pa, vec_v > Pa
+        # expected_value_below = np.sum((beta * eta + alpha * cdf_values_above[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
+        # expected_value_above = np.sum((beta * eta + alpha * cdf_values_below[mask_above]) * vec_v[mask_above] * v_prior[mask_above] + rho * mr + theta * mom)
 
-        result = expected_value_below + expected_value_above
+        # print(f'INSIDE PA_FP THE P_BUY IS {p_buy}, EV BELOW IS {expected_value_below}, EV ABOVE IS {expected_value_above}')
+        # result = expected_value_below + expected_value_above
+
+        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
+        result = sum([((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-Vi, scale=sigma_w)))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pa]) 
+        result += sum([((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-Vi, scale=sigma_w)))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pa])
+                
         return result / p_buy
             
     def sizing_factor(self, size, scale = .1):
@@ -473,7 +527,7 @@ class God():
             return 1
         return 0
     
-    def send_info(self, directory, bid_price, bid_volume, ask_price, ask_volume, true_val):
+    def send_info(self, bid_price, bid_volume, ask_price, ask_volume, true_val):
         """
         Sends information to market agents by iterating through hashmap 
 
@@ -481,23 +535,23 @@ class God():
         """
         mm_quote = (bid_price, bid_volume, ask_price, ask_volume)
         informed_val = true_val
-        for id, agent in directory.items():
+        for id, agent in self.directory.items():
             if id == 0:
-                agent.receive_quote()
-            elif agent.strategy is InformedStrategy or NoiseStrategy:
+                agent.receive_quote(mm_quote)
+            else:
                 agent.receive_true(true_val)
 
     def receive_trade(self, interaction_result):
         """
         Receive trade for updating posterior 
 
-        interaction_result: tuple(Bool, Order), bool is true if an order was placed, false if no order was placed 
+        interaction_result: tuple(Bool, Trade), bool is true if an order was placed, false if no order was placed 
                             and Order is none if no order placed
         """
         trade_type = 0
         if interaction_result[0] == False:
             trade_type = 0
-        elif interaction_result[1].side == Side.BUY:
+        elif interaction_result[2].side == Side.BUY:
             trade_type = 1
         else:
             trade_type = -1
@@ -510,8 +564,13 @@ class God():
 
         Need to create senders and receivers for messages to MM and traders 
         """
+        print(f"++++++++++trade processing at time {self.i}++++++++++")
         if (self.i == 0):
-            self.v_distrib = Vi_prior(sigma_price = self.sigma, centered_at = self.V0, multiplier = self.multiplier)
+            self.v_distrib = Vi_prior(sigma = 0.5, centered_at = self.V0, multiplier = self.multiplier)
+            # print(f'initial prior distribution is: {self.v_distrib.vec_v[-1]} with probs {self.v_distrib.v_history[-1]}')
+
+        if self.jumps[self.i]==1:
+            self.v_distrib.reset(centered_at=self.exp_value[-1])
 
         self.mr_indicator = self.comp_mr_indicator()
         self.mom_indicator = self.comp_mom_indicator()
@@ -526,7 +585,8 @@ class God():
                                                                           self.theta, self.mr_indicator, self.mom_indicator, 
                                                                           self.eta, self.sigma_w, self.v_distrib.vec_v, 
                                                                           self.v_distrib.prior_v), xtol=1e-2, maxiter=500, method='del2').item()
-        curr_ask += -self.gamma * self.inventory[-1]
+        # curr_ask += -self.gamma * self.inventory[-1]
+        # print(f'immediately returned ask is {curr_ask}')
         curr_ask += self.extend_spread ## extend spread
         self.asks.append(curr_ask)
 
@@ -534,38 +594,54 @@ class God():
                                                                           self.theta, self.mr_indicator, self.mom_indicator, 
                                                                           self.eta, self.sigma_w, self.v_distrib.vec_v, 
                                                                           self.v_distrib.prior_v), xtol=1e-2, maxiter=500, method='del2').item()
-        curr_bid += -self.gamma*self.inventory[-1]
+        # curr_bid += -self.gamma*self.inventory[-1]
+        # print(f'immediately returned bid is {curr_bid}')
         curr_bid += -self.extend_spread ## extend spread
         self.bids.append(curr_bid)
+
+        print(f'current bid, ask: {curr_bid, curr_ask}')
 
         self.Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                           mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, sigma_w=self.sigma_w, 
                           vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
         assert self.Pbuy>0-self.eps and self.Pbuy<1+self.eps, "Pbuy not between 0 and 1"
         
+        # print(f'bid buy prob: {self.Pbuy}')
+
         self.Psell = self.P_sell(Pb=self.bids[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, theta=self.theta, 
                             mr=self.mr_indicator, mom=self.mom_indicator, eta = self.eta, sigma_w=self.sigma_w, 
                             vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
         assert self.Psell>0-self.eps and self.Psell<1+self.eps, "Psell not between 0 and 1"
         
-        self.Pnoorder = self.P_no_order(Pb=self.bids[-1], Pa=self.asks[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, 
+        # print(f'ask sell prob: {self.Pbuy}')
+
+        # print(f'curr bid: {self.bids[-1]}, curr ask: {self.asks[-1]}, vec_v = {self.v_distrib.vec_v}, prior = {self.v_distrib.prior_v}')
+
+        self.Pnoorder = self.P_no(Pb=self.bids[-1], Pa=self.asks[-1], alpha=self.alpha,  beta=self.beta, rho=self.rho, 
                                    theta=self.theta, mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, 
                                    sigma_w=self.sigma_w, vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
         assert self.Pnoorder>0-self.eps and self.Pnoorder<1+self.eps, "P_noorder not between 0 and 1"
+        
+        print(f'00000000000000000000000000 pbuy: {self.Pbuy}, psell: {self.Psell}, pno: {self.Pnoorder}')
 
-        assert self.Psell+self.Pbuy+self.Pnoorder>0-self.eps and self.Pbuy +self.Psell+self.Pnoorder<1+self.eps
+        assert self.Psell+self.Pbuy+self.Pnoorder>0-self.eps and self.Pbuy + self.Psell + self.Pnoorder<1+self.eps
 
-        self.exp_value.append(self.compute_exp_true_value(Pb=self.bids[-1], Pa=self.asks[-1], psell=self.P_sell, pbuy=self.P_buy, 
+        self.exp_value.append(self.compute_exp_true_value(Pb=self.bids[-1], Pa=self.asks[-1], psell=self.Psell, pbuy=self.Pbuy, 
                                                           vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v, 
                                                           alpha=self.alpha, eta=self.eta, sigma_w=self.sigma_w))
     
+        # print(f'----------------expected value is {self.exp_value[-1]}, true value is {self.true_value[self.i]}')
+
         if trade is not None:
             self.v_distrib.compute_posterior(trade, Pbuy=self.Pbuy, Psell=self.Psell, Pno=self.Pnoorder, Pa=self.asks[-1], Pb=self.bids[-1], 
                                             alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                                             mr_true=self.mr_indicator, mom_true=self.mom_indicator, eta=self.eta, 
-                                            sigma_w=self.sigma_w, update_prior=True)
+                                            sigma_w=self.sigma_w)
+            print(f'====================posterior is: {np.abs(sum(self.v_distrib.prior_v) - 1)}')
+            assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
 
-        assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
+
+        self.send_info(curr_bid, 10, curr_ask, 10, self.true_value[self.i])
 
         self.i += 1
 
