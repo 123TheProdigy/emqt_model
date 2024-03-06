@@ -426,6 +426,7 @@ class MarketModel(Model):
         """
         self.num_agents = N
         self.schedule = RandomActivation(self)
+        self.traders = []
         self.directory = {}
         self.time = 0
         self.book_keeper = BookKeeper(0, self)
@@ -438,7 +439,8 @@ class MarketModel(Model):
             agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
             a = TradingAgent(i, self, agent_strategy)
             self.directory[i] = a
-            self.schedule.add(a)
+            self.traders.append(a)
+            # self.schedule.add(a)
 
         self.book_keeper.get_directory(self.directory)
         self.running = True
@@ -448,9 +450,10 @@ class MarketModel(Model):
     def step(self):
         self.god.run_and_advance()
         self.market_maker.step()
-        Parallel(n_jobs=-1, prefer="threads")(
-            delayed(agent.step)() for agent in self.schedule.agents
-        )
+        # self.schedule.step()
+        random.shuffle(self.traders)
+        for agent in self.traders:
+            agent.step()
         self.time += 1
 
 
@@ -459,7 +462,7 @@ def collect_price(model):
 
 
 model = MarketModel(3)
-for i in range(5):
+for i in range(100):
     print("Step number: ", i)
     model.step()
     # print("Price:", collect_price(model))
