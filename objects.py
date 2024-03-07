@@ -304,7 +304,7 @@ class God():
         V0
     """
     def __init__(self, tmax: int, sigma: float, jump_prob: float, alpha: float, beta: float, rho: float, theta: float, 
-                 mr_thresh: float, mom_thresh: float, eta: float, sigma_w: float, V0: float, directory: Dict, extend_spread: Optional[float] = 0, 
+                 mr_thresh: float, mom_thresh: float, eta: float, sigma_w: float, V0: float, directory: Dict, extend_spread: Optional[float] = 0.03, 
                  gamma: Optional[float] = 0, mr_window: Optional[int] = 10, mom_window: Optional[int] = 10):
         self.tmax = tmax
         self.sigma = sigma
@@ -322,11 +322,12 @@ class God():
         self.gamma = gamma
         self.mr_window = mr_window
         self.mom_window = mom_window
-        self.multiplier = 300
+        self.multiplier = 400
         self.eps = 1e-1
         self.directory = directory
 
         self.jumps, self.true_value = self.get_asset_dynamics()
+        # print(self.true_value)
         self.midpoint = self.true_value[0] # initialize LOB midpoint as true price for iteration 1
         self.ptd = [] # prices to date, treat as a stack 
         self.ema = 0 # for momentum strat 
@@ -336,9 +337,22 @@ class God():
         self.bids = []
         self.exp_value = []
 
+        self.return_asks = []
+        self.return_bids = []
+        self.return_exp = []
+
         self.Pbuy = None
         self.Psell = None
         self.Pnoorder = None
+
+    def increment_time(self):
+        self.i += 1
+        self.return_asks.append(self.asks[-1])
+        self.return_bids.append(self.bids[-1])
+        self.return_exp.append(self.exp_value[-1])
+
+    def get_true(self):
+        return self.true_value[self.i]
 
     def get_asset_dynamics(self):
         val = asset_dynamics(p_jump=self.jump_prob, sigma=self.sigma, init_price=self.V0)
@@ -439,10 +453,10 @@ class God():
 
         prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
         result = sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
-        print(f'initial sum: {result}')
+        # print(f'initial sum: {result}')
         result += sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
 
-        print(f'iiiiiiiiii the result is {result}, the psell is {p_sell}')
+        # print(f'iiiiiiiiii the result is {result}, the psell is {p_sell}')
 
         return result / p_sell 
 
@@ -537,7 +551,7 @@ class God():
 
         directory: hashmap of all agents and their respective strategies 
         """
-        mm_quote = (bid_price, bid_volume, ask_price, ask_volume)
+        mm_quote = (round(bid_price, 2), bid_volume, round(ask_price, 2), ask_volume)
         informed_val = true_val
         for id, agent in self.directory.items():
             if id == 0:
@@ -592,6 +606,7 @@ class God():
         # curr_ask += -self.gamma * self.inventory[-1]
         # print(f'immediately returned ask is {curr_ask}')
         curr_ask += self.extend_spread ## extend spread
+        curr_ask = round(curr_ask, 2)
         self.asks.append(curr_ask)
 
         curr_bid = fixed_point(self.Pb_fp, self.true_value[self.i], args=(self.alpha, self.beta, self.rho, 
@@ -601,9 +616,10 @@ class God():
         # curr_bid += -self.gamma*self.inventory[-1]
         # print(f'immediately returned bid is {curr_bid}')
         curr_bid += -self.extend_spread ## extend spread
+        curr_bid = round(curr_bid, 2)
         self.bids.append(curr_bid)
 
-        print(f'current bid, ask: {curr_bid, curr_ask}')
+        print(f'current bid, ask: {round(curr_bid,2), round(curr_ask, 2)}')
 
         self.Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                           mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, sigma_w=self.sigma_w, 
@@ -626,7 +642,7 @@ class God():
                                    sigma_w=self.sigma_w, vec_v=self.v_distrib.vec_v, v_prior=self.v_distrib.prior_v)
         assert self.Pnoorder>0-self.eps and self.Pnoorder<1+self.eps, "P_noorder not between 0 and 1"
         
-        print(f'00000000000000000000000000 pbuy: {self.Pbuy}, psell: {self.Psell}, pno: {self.Pnoorder}')
+        # print(f'00000000000000000000000000 pbuy: {self.Pbuy}, psell: {self.Psell}, pno: {self.Pnoorder}')
 
         assert self.Psell+self.Pbuy+self.Pnoorder>0-self.eps and self.Pbuy + self.Psell + self.Pnoorder<1+self.eps
 
@@ -641,13 +657,17 @@ class God():
                                             alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                                             mr_true=self.mr_indicator, mom_true=self.mom_indicator, eta=self.eta, 
                                             sigma_w=self.sigma_w)
-            print(f'====================posterior is: {np.abs(sum(self.v_distrib.prior_v) - 1)}')
+            # print(f'====================posterior is: {np.abs(sum(self.v_distrib.prior_v) - 1)}')
             # assert np.abs(sum(self.v_distrib.prior_v) - 1) < self.eps, "posterior prob is not normalized"
 
 
         self.send_info(curr_bid, 10, curr_ask, 10, self.true_value[self.i])
 
-        self.i += 1
+    def return_data(self):
+        """
+        Returns a tuple of lists containing data
+        """
+        return self.true_value, self.return_exp, self.return_bids, self.return_asks
 
     def show_result(self, 
                     figsize:Optional[tuple]=(10,9),
@@ -660,7 +680,6 @@ class God():
             - spread over time
             - MM true value distribution at 3 different iterations
         '''
-
 
         fig, ax = plt.subplots(2,2, figsize=(figsize[0],figsize[1]), dpi=dpi)
 
