@@ -4,6 +4,7 @@ from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 import numpy as np
+import matplotlib.pyplot as plt
 
 from objects import Side, Order, Trade, God
 
@@ -95,7 +96,7 @@ class BookKeeper(Agent):
                     self.trades.append(Trade(best_ask, vol, order.agent_id, "market_maker", self.time))
                     agent = self.directory[order.agent_id]
                     agent.order_filled(self.trades[-1], order)
-                    print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 1')
+                    # print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 1')
                     print(f'order has been filled at {best_ask}')
 
                     order.quantity -= vol
@@ -113,7 +114,7 @@ class BookKeeper(Agent):
                     self.trades.append(Trade(best_bid, vol, order.agent_id, "market_maker", self.time))
                     agent = self.directory[order.agent_id]
                     agent.order_filled(self.trades[-1], order)
-                    print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 2')
+                    # print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 2')
                     print(f'order has been filled at {best_bid}')
 
                     order.quantity -= vol
@@ -141,7 +142,9 @@ class MarketMaker(Agent):
         self.book_keeper = book
         
         self.pnl = 0
-        self.net_position = 0
+        self.pnl_over_time = []
+        self.position = 0
+        self.position_over_time = []
         self.best_bids = []
         self.best_asks = []
 
@@ -149,6 +152,26 @@ class MarketMaker(Agent):
         self.bid_vol = 0
         self.curr_ask = 0
         self.ask_vol = 0
+
+    def update_pnl(self, trade: Order, true_val):
+        trade_side = -trade.side
+        trade_price = trade.price
+
+        if trade_side == Side.BUY:
+            self.position += trade.quantity
+        else:
+            self.position -= trade.quantity
+
+        diff = abs(trade_price - true_val)
+
+        if trade_side == Side.BUY and trade_price <= true_val:
+            self.pnl += diff
+        elif trade_side == Side.BUY and trade_price > true_val:
+            self.pnl -= diff
+        elif trade_side == Side.SELL and trade_price >= true_val:
+            self.pnl += diff
+        else:
+            self.pnl -= diff
 
     def send_limit_order(self, order: Order):
         if order.side == Side.BUY:
@@ -170,6 +193,8 @@ class MarketMaker(Agent):
         self.book_keeper.receive_limit_order(self.best_bids[-1])
         self.book_keeper.receive_limit_order(self.best_asks[-1])
         self.book_keeper.process_market_orders()
+        self.pnl_over_time.append(self.pnl)
+        self.position_over_time.append(self.position)
 
 
 class TradingAgent(Agent):
@@ -193,6 +218,8 @@ class TradingAgent(Agent):
         self.strategy = strategy
         self.position = 0
         self.pnl = 0
+        self.pnl_over_time = []
+        self.position_over_time = []
         self.posted_bids = []
         self.posted_offers = []
         self.hit_bids = []
@@ -238,10 +265,14 @@ class TradingAgent(Agent):
         side = Side.BUY if trade.buyer == self.unique_id else Side.SELL
         if side == Side.BUY:
             self.hit_bids.append(trade)
-            
+            self.position += order.quantity
         else:
             self.hit_asks.append(trade)
+            self.position -= order.quantity
+
         self.model.god.receive_trade((True, trade, order))
+        true_price = self.model.god.get_true()
+        self.update_pnl(order, true_price)
 
     def send_order(self, order):
         """
@@ -255,16 +286,31 @@ class TradingAgent(Agent):
         self.exchange.receive_order(order)
         self.exchange.process_market_orders()
     
-    def update_pnl(self, trade : Trade, true_val: int): 
+    def update_pnl(self, trade: Order, true_val): 
         """
         This will depend a decent amount on control flow because the true value from God needs to be passed in 
         """
-        pass
+        trade_price = trade.price
+        trade_side = trade.side
+
+        self.mm.update_pnl(trade, true_val)
+        diff = abs(trade_price - true_val)
+
+        if trade_side == Side.BUY and trade_price <= true_val:
+            self.pnl += diff
+        elif trade_side == Side.BUY and trade_price > true_val:
+            self.pnl -= diff
+        elif trade_side == Side.SELL and trade_price >= true_val:
+            self.pnl += diff
+        else:
+            self.pnl -= diff
 
     def step(self):
         order = self.decide_order()
         if order is not None:
             self.send_order(order)
+        self.pnl_over_time.append(self.pnl)
+        self.position_over_time.append(self.position)
         # self.model.market_maker.price += order * 0.1
 
 
@@ -304,9 +350,10 @@ class InformedStrategy:
         pass
 
     def decide_order(self, bid, ask, true_value):
+        # print(f'at bid {bid} and ask {ask} and true value {true_value}')
         if true_value > ask:
             return 1
-        elif (bid < true_value) and (true_value < ask):
+        elif (bid < true_value):
             return 0
         else:
             return -1
@@ -435,8 +482,14 @@ class MarketModel(Model):
 
         self.schedule.add(self.book_keeper)
         self.schedule.add(self.market_maker)
-        for i in range(1, self.num_agents):
-            agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
+        for i in range(1, self.num_agents + 1):
+            if i % 3 == 1:
+                agent_strategy = UninformedStrategy(eta=0.5)
+            elif i % 3 == 2: 
+                agent_strategy = NoisyInformedStrategy(sigma_w=.1)
+            else:
+                agent_strategy = InformedStrategy()
+            # agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
             a = TradingAgent(i, self, agent_strategy)
             self.directory[i] = a
             self.traders.append(a)
@@ -444,17 +497,19 @@ class MarketModel(Model):
 
         self.book_keeper.get_directory(self.directory)
         self.running = True
-        self.god = God(tmax=100, sigma=0.5, jump_prob=0.1, alpha=0.5, beta=0.5, rho=0, theta=0,
-                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.05, V0=100, directory=self.directory)
+        self.god = God(tmax=200, sigma=0.50, jump_prob=0.1, alpha=0.5, beta=0.5, rho=0, theta=0,
+                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.1, V0=100, directory=self.directory)
 
     def step(self):
         self.god.run_and_advance()
+        # print(f'bid and ask: {self.market_maker.curr_bid, self.market_maker.curr_ask}')
         self.market_maker.step()
         # self.schedule.step()
         random.shuffle(self.traders)
         for agent in self.traders:
             agent.step()
         self.time += 1
+        self.god.increment_time()
 
 
 def collect_price(model):
@@ -462,7 +517,43 @@ def collect_price(model):
 
 
 model = MarketModel(3)
-for i in range(100):
-    print("Step number: ", i)
-    model.step()
-    # print("Price:", collect_price(model))
+try:
+    for i in range(200):
+        print("Step number: ", i)
+        model.step()
+        # print("Price:", collect_price(model))
+    for key, value in model.directory.items():
+        print(f'agent {key} finished with PNL of {value.pnl}')
+except KeyboardInterrupt:
+    print("\n Simulation ended early \n")
+
+finally:
+    god_data = model.god.return_data() # tuple of (true values, expected values, bids, asks)
+
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+    for key, value in model.directory.items():
+        axs[0, 0].plot(value.pnl_over_time, label = key)
+        axs[0, 1].plot(value.position_over_time, label = key)
+    axs[0, 0].legend()
+    axs[0, 0].set_title("agent PNL over time")
+    axs[0, 0].set_xlabel("iteration")
+
+    axs[0, 1].legend()
+    axs[0, 1].set_title("agent positions over time")
+    axs[0, 1].set_xlabel("iteration")
+
+    axs[1, 0].plot(god_data[0], label = "true value")
+    axs[1, 0].plot(god_data[1], label = "expected value")
+    axs[1, 0].legend()
+    axs[1, 0].set_title("true value vs expected value over time")
+
+    axs[1, 1].plot(god_data[0], label = "true value")
+    axs[1, 1].plot(god_data[2], label = "bids")
+    axs[1, 1].plot(god_data[1], label = "expected price")
+    axs[1, 1].plot(god_data[3], label = "asks")
+    axs[1, 1].legend()
+    axs[1, 1].set_title("spread around expected price over time")
+
+    plt.tight_layout()
+    plt.show()
