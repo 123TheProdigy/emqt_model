@@ -332,6 +332,7 @@ class God():
         self.ptd = [] # prices to date, treat as a stack 
         self.ema = 0 # for momentum strat 
         self.i = 0 # ITERATION # 
+        self.jump_here = False 
 
         self.asks = [] 
         self.bids = []
@@ -350,6 +351,7 @@ class God():
         self.return_asks.append(self.asks[-1])
         self.return_bids.append(self.bids[-1])
         self.return_exp.append(self.exp_value[-1])
+        self.jump_here = False
 
     def get_true(self):
         return self.true_value[self.i]
@@ -587,8 +589,9 @@ class God():
             self.v_distrib = Vi_prior(sigma = 0.5, centered_at = self.V0, multiplier = self.multiplier)
             # print(f'initial prior distribution is: {self.v_distrib.vec_v[-1]} with probs {self.v_distrib.v_history[-1]}')
 
-        if self.jumps[self.i]==1:
+        if self.jumps[self.i] == 1 and self.jump_here is False:
             self.v_distrib.reset(centered_at=self.exp_value[-1])
+            self.jump_here = True
 
         self.mr_indicator = self.comp_mr_indicator()
         self.mom_indicator = self.comp_mom_indicator()
@@ -619,7 +622,7 @@ class God():
         curr_bid = round(curr_bid, 2)
         self.bids.append(curr_bid)
 
-        print(f'current bid, ask: {round(curr_bid,2), round(curr_ask, 2)}')
+        print(f'current bid, ask from inside God: {round(curr_bid,2), round(curr_ask, 2)}')
 
         self.Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                           mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, sigma_w=self.sigma_w, 

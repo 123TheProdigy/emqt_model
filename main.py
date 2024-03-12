@@ -74,8 +74,11 @@ class BookKeeper(Agent):
         """
         Process all orders at end of iteration
         """
-        best_ask = list(self.ask_book.keys())[0]
-        best_bid = list(self.bid_book.keys())[0]
+        try:
+            best_ask = list(self.ask_book.keys())[0]
+            best_bid = list(self.bid_book.keys())[0]
+        except:
+            return 
 
         for key, val in self.directory.items():
             if key == 0:
@@ -113,9 +116,9 @@ class BookKeeper(Agent):
 
                     self.trades.append(Trade(best_bid, vol, order.agent_id, "market_maker", self.time))
                     agent = self.directory[order.agent_id]
+                    print(f'order has been filled at {best_bid} with quantity {vol}')
                     agent.order_filled(self.trades[-1], order)
                     # print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 2')
-                    print(f'order has been filled at {best_bid}')
 
                     order.quantity -= vol
                     self.bid_book[best_bid][0] -= vol
@@ -192,9 +195,11 @@ class MarketMaker(Agent):
     def step(self):
         self.book_keeper.receive_limit_order(self.best_bids[-1])
         self.book_keeper.receive_limit_order(self.best_asks[-1])
+        print(f'inserting bid, ask of {self.best_bids[-1], [self.best_asks[-1]]}')
         self.book_keeper.process_market_orders()
         self.pnl_over_time.append(self.pnl)
         self.position_over_time.append(self.position)
+        self.book_keeper.clear_limit_book()
 
 
 class TradingAgent(Agent):
@@ -262,7 +267,7 @@ class TradingAgent(Agent):
         """
         If an order is filled by the bookkeeper, then we receive a notification and add it to our trade history 
         """
-        side = Side.BUY if trade.buyer == self.unique_id else Side.SELL
+        side = order.side
         if side == Side.BUY:
             self.hit_bids.append(trade)
             self.position += order.quantity
@@ -486,7 +491,7 @@ class MarketModel(Model):
             if i % 3 == 1:
                 agent_strategy = UninformedStrategy(eta=0.5)
             elif i % 3 == 2: 
-                agent_strategy = NoisyInformedStrategy(sigma_w=.1)
+                agent_strategy = NoisyInformedStrategy(sigma_w=.5)
             else:
                 agent_strategy = InformedStrategy()
             # agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
@@ -497,8 +502,8 @@ class MarketModel(Model):
 
         self.book_keeper.get_directory(self.directory)
         self.running = True
-        self.god = God(tmax=200, sigma=0.50, jump_prob=0.1, alpha=0.5, beta=0.5, rho=0, theta=0,
-                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.1, V0=100, directory=self.directory)
+        self.god = God(tmax=15, sigma=0.50, jump_prob=0.1, alpha=0.5, beta=0.5, rho=0, theta=0,
+                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.5, V0=100, directory=self.directory)
 
     def step(self):
         self.god.run_and_advance()
@@ -518,12 +523,13 @@ def collect_price(model):
 
 model = MarketModel(3)
 try:
-    for i in range(200):
+    for i in range(15):
         print("Step number: ", i)
         model.step()
         # print("Price:", collect_price(model))
     for key, value in model.directory.items():
         print(f'agent {key} finished with PNL of {value.pnl}')
+        print(f'agent {key} finished with net position of {value.position}')
 except KeyboardInterrupt:
     print("\n Simulation ended early \n")
 
