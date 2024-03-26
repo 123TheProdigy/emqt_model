@@ -60,11 +60,14 @@ class Vi_prior():
             vectors to keep track of them 
         '''
 
-        vec_v = []
-        for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
-            vec_v.append(self.center-self.nb_sigma_range*self.sigma+i/self.multiplier)
-        
-        self.vec_v = vec_v
+        # vec_v = []
+        # for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
+            # vec_v.append(self.center-self.nb_sigma_range*self.sigma+i/self.multiplier)
+        # self.vec_v = vec_v
+        nb_values = int(2 * self.nb_sigma_range * self.sigma * self.multiplier + 1)
+        increments = np.arange(nb_values) / self.multiplier
+        vec_v = self.center - self.nb_sigma_range * self.sigma + increments
+        self.vec_v = vec_v.tolist()
 
         if update_history:
             self.v_history.append(vec_v)
@@ -79,11 +82,18 @@ class Vi_prior():
             vectors to keep track of them 
         '''
 
-        prior_v = []
-        for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
-            prior_v.append(norm.cdf(x=-self.nb_sigma_range*self.sigma+(i+1)/self.multiplier, scale=self.sigma) - norm.cdf(x=-self.nb_sigma_range*self.sigma+i/self.multiplier, scale=self.sigma))
+        # prior_v = []
+        # for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
+            # prior_v.append(norm.cdf(x=-self.nb_sigma_range*self.sigma+(i+1)/self.multiplier, scale=self.sigma) - norm.cdf(x=-self.nb_sigma_range*self.sigma+i/self.multiplier, scale=self.sigma))
         
-        self.prior_v = prior_v
+        # self.prior_v = prior_v
+        nb_values = int(2 * self.nb_sigma_range * self.sigma * self.multiplier + 1)
+        increments = np.arange(nb_values) / self.multiplier
+        x_values = -self.nb_sigma_range * self.sigma + increments
+        prior_v = (norm.cdf(x=-self.nb_sigma_range * self.sigma + (increments + 1) / self.multiplier,scale=self.sigma)
+                   - norm.cdf(x=-self.nb_sigma_range * self.sigma + increments / self.multiplier, scale=self.sigma))
+        self.prior_v = prior_v.tolist()
+
         if update_history:
             self.p_history.append(prior_v)
 
@@ -128,25 +138,31 @@ class Vi_prior():
 
         if order_type == 1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
 
-            post = np.array(post)/Pbuy
-
+            # post = np.array(post)/Pbuy
+            post = self.prior_v * ((1 - alpha) * eta + alpha * (1 - norm.cdf(Pa - self.vec_v, scale=sigma_w)))
+            post /= Pbuy
         
         elif order_type == -1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
 
-            post = np.array(post)/Psell
+            # post = np.array(post)/Psell
+            post = self.prior_v * ((1 - alpha) * eta + alpha * norm.cdf(Pb - self.vec_v, scale=sigma_w))
+            post /= Psell
 
         else:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
 
-            post = np.array(post)/Pno
+            # post = np.array(post)/Pno
+            post = self.prior_v * ((1 - 2 * eta) * (1 - alpha) + alpha * (
+                        norm.cdf(Pa - self.vec_v, scale=sigma_w) - norm.cdf(Pb - self.vec_v, scale=sigma_w)))
+            post /= Pno
             
         if update_prior:
             self.prior_v = post
@@ -189,9 +205,9 @@ def P_sell(Pb : float,
     else:
 
         result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
-    
+        # for i, v in enumerate(vec_v):
+            # result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
+        result += np.sum(v_prior * norm.cdf(Pb - np.array(vec_v), scale=sigma_w) * alpha)
     return result
 
 ## fixed point equation for Bid price
@@ -271,8 +287,9 @@ def P_buy(Pa : float,
     else:
 
         result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
+        # for i, v in enumerate(vec_v):
+            # result += alpha * (1 - norm.cdf(x=Pa - v, scale=sigma_w)) * v_prior[i]
+        result += np.sum(alpha * (1 - norm.cdf(Pa - np.array(vec_v), scale=sigma_w)) * np.array(v_prior))
 
     return result
 
@@ -306,9 +323,11 @@ def P_no_order(Pb : float,
 
     prob = (1-alpha)*(1-2*eta) ## part of uninformed traders
 
-    for i, v in enumerate(vec_v):
+    # for i, v in enumerate(vec_v):
 
-        prob += v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))
+        # prob += v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))
+
+    prob += np.sum(v_prior * alpha * (norm.cdf(Pa - np.array(vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(vec_v), scale=sigma_w)))
 
     return prob
 
