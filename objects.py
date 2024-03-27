@@ -156,11 +156,12 @@ class Vi_prior():
         """
         Create vector of possible V_i. The 4 used in the calculations represents the number of std
         """
-        vec_v = []
-        for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
-            vec_v.append(self.center - 4 * self.sigma + (i / self.multiplier))
-        
-        self.vec_v = vec_v
+        # vec_v = []
+        # for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
+            # vec_v.append(self.center - 4 * self.sigma + (i / self.multiplier))
+        increments = np.arange(int(2 * 4 * self.sigma * self.multiplier + 1)) / self.multiplier
+        vec_v = self.center - 4 * self.sigma + increments
+        self.vec_v = vec_v.tolist()
         self.v_history.append(vec_v)
 
 
@@ -168,12 +169,14 @@ class Vi_prior():
         """
         Create vector of priors P(V=Vi) from CDF of gaussian with mean 0, std sigma
         """
-        prior_v = []
-        for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
-            prior_v.append(norm.cdf(x = -4 * self.sigma + (i+1)/self.multiplier, scale = self.sigma) 
-                           - norm.cdf(x = -4 * self.sigma + i/self.multiplier, scale = self.sigma))
-        
-        self.prior_v = prior_v
+        # prior_v = []
+        # for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
+            # prior_v.append(norm.cdf(x = -4 * self.sigma + (i+1)/self.multiplier, scale = self.sigma)
+                           # - norm.cdf(x = -4 * self.sigma + i/self.multiplier, scale = self.sigma))
+        increments = np.arange(int(2 * 4 * self.sigma * self.multiplier + 1)) / self.multiplier
+        prior_v = norm.cdf(-4 * self.sigma + (increments + 1) / self.multiplier, scale=self.sigma) - norm.cdf(-4 * self.sigma + increments / self.multiplier, scale=self.sigma)
+
+        self.prior_v = prior_v.to_list()
         print(f'priors sum to: {np.sum(self.prior_v)}')
         self.p_history.append(prior_v)
     
@@ -232,25 +235,29 @@ class Vi_prior():
 
         if order_type == 1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
 
-            post = np.array(post)/Pbuy
+            # post = np.array(post)/Pbuy
+            post = (self.prior_v * ((1 - alpha) * eta + alpha * (1 - norm.cdf(Pa - np.array(self.vec_v), scale=sigma_w)))) / Pbuy
 
-        
+
         elif order_type == -1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
 
-            post = np.array(post)/Psell
+            # post = np.array(post)/Psell
+            post = (self.prior_v * ((1 - alpha) * eta + alpha * norm.cdf(Pb - np.array(self.vec_v), scale=sigma_w))) / Psell
+
 
         else:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
 
-            post = np.array(post)/Pno
+            # post = np.array(post)/Pno
+            post = (self.prior_v * ((1 - 2 * eta) * beta + alpha * (norm.cdf(Pa - np.array(self.vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(self.vec_v), scale=sigma_w)) + rho * mr_true + theta * mom_true)) / Pno
 
         self.prior_v = post
         self.p_history.append(post)
@@ -378,10 +385,10 @@ class God():
         #     else:
         #         result += (alpha * norm.cdf(v - Pa, scale = sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
     
-        result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
-
+        # result = (1-alpha)*eta
+        # for i, v in enumerate(vec_v):
+            # result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
+        result = (1 - alpha) * eta + alpha * np.sum((1 - norm.cdf(Pa - np.array(vec_v), scale=sigma_w)) * np.array(v_prior))
         return result 
 
     def P_sell(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
@@ -402,10 +409,10 @@ class God():
         #     else:
         #         result += (alpha * norm.cdf(v - Pb, scale=self.sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
 
-        result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
-
+        # result = (1-alpha)*eta
+        # for i, v in enumerate(vec_v):
+            # result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
+        result = (1 - alpha) * eta + alpha * np.sum(norm.cdf(Pb - np.array(vec_v), scale=sigma_w) * np.array(v_prior))
         return result 
 
     def P_no(self, Pb: float, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
@@ -419,13 +426,13 @@ class God():
         v_prior: prior probability of V = V_i
         """
         assert Pa > Pb, "something went wrong, your ask is lower than your bid"
-        prob = (beta) * (1 - 2*eta)
-        mr = 1 - mr
-        mom = 1 - mom
+        # prob = (beta) * (1 - 2*eta)
+        # mr = 1 - mr
+        # mom = 1 - mom
 
-        for i, v in enumerate(vec_v):
-            prob += v_prior[i] * alpha * (norm.cdf(x = Pa - v, scale = sigma_w) - norm.cdf(x = Pb - v, scale = sigma_w))
-
+        # for i, v in enumerate(vec_v):
+            # prob += v_prior[i] * alpha * (norm.cdf(x = Pa - v, scale = sigma_w) - norm.cdf(x = Pb - v, scale = sigma_w))
+        prob = beta * (1 - 2 * eta) + np.sum(v_prior * alpha * (norm.cdf(Pa - np.array(vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(vec_v), scale=sigma_w)))
         return prob
 
     def Pb_fp(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
@@ -518,9 +525,10 @@ class God():
         """
 
         exp = Pa*psell + Pb*pbuy 
-        for i, v in enumerate(vec_v):
-            exp += v*v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale = sigma_w) - norm.cdf(x=Pb-v, scale = sigma_w)) # effectively the prob true value is between the bid/ask
-        
+        # for i, v in enumerate(vec_v):
+            # exp += v*v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale = sigma_w) - norm.cdf(x=Pb-v, scale = sigma_w)) # effectively the prob true value is between the bid/ask
+        v_contributions = vec_v * v_prior * alpha * (norm.cdf(Pa - np.array(vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(vec_v), scale=sigma_w))
+        exp += np.sum(v_contributions)
         return exp
     
     def comp_mr_indicator(self):
