@@ -5,6 +5,7 @@ import random
 from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import linregress
 
 from objects import Side, Order, Trade, God
 
@@ -416,22 +417,44 @@ class NoiseStrategy:
         Fit drift and volatility parameters using OLS regression on historical price data.
         """
         returns = np.diff(np.log(price_history))
+        """
         X = np.vstack((np.ones_like(returns), np.arange(len(returns)))).T
         y = returns[1:]
-        
-        params = np.linalg.lstsq(X, y, rcond=None)[0]
+        print("Returns shape:", returns.shape)
+        print(returns)
+        print("X shape:", X.shape)
+        print(X)
+        print("y shape:", y.shape)
+        print(y)
+        params = np.linalg.lstsq(X, returns, rcond=None)[0]
 
         # Drift is the intercept, volatility is the slope
         self.drift = params[0]
         self.volatility = params[1] / np.sqrt(self.dt)  # Adjust volatility for time step
+        """
+        if np.allclose(returns, 0):
+            self.drift = 0
+            self.volatility = 0
+        else:
+            X = np.vstack((np.ones_like(returns), np.arange(len(returns)))).T
+            print("start")
+            print(returns)
+            print(X)
+            x_mean = np.mean(X[:, 1])
+            returns_mean = np.mean(returns)
+
+            xy_diff_sum = np.sum((X[:, 1] - x_mean) * (returns - returns_mean))
+            x_squared_sum = np.sum((X[:, 1] - x_mean) ** 2)
+
+            self.volatility = xy_diff_sum / x_squared_sum
+            self.drift = returns_mean - self.volatility * x_mean
 
     def decide_order(self, price_history):
-        if price_history is None:
-            return
+        if len(price_history) < 3:
+            return 0
         self.fit_parameters(price_history)
         dW = np.random.normal(loc=0, scale=np.sqrt(self.dt))
-        dS = self.drift * self.price[-1] * self.dt + self.volatility * self.price[-1] * dW
-        # self.price += dS
+        dS = self.drift * price_history[-1] * self.dt + self.volatility * price_history[-1] * dW
 
         if dS > 0:
             return 1
