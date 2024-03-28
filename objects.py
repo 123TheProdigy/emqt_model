@@ -174,10 +174,16 @@ class Vi_prior():
         """
         Create vector of priors P(V=Vi) from CDF of gaussian with mean 0, std sigma
         """
-        prior_v = []
-        for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
-            prior_v.append(norm.cdf(x=-4 * self.sigma + (i + 1) / self.multiplier, scale=self.sigma)
-                           - norm.cdf(x=-4 * self.sigma + i / self.multiplier, scale=self.sigma))
+        # prior_v = []
+        # for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
+            # prior_v.append(norm.cdf(x=-4 * self.sigma + (i + 1) / self.multiplier, scale=self.sigma)
+                           # - norm.cdf(x=-4 * self.sigma + i / self.multiplier, scale=self.sigma))
+        num_values = int(2 * 4 * self.sigma * self.multiplier + 1)
+        indices = np.arange(num_values)
+        vec_v = self.center - 4 * self.sigma + indices / self.multiplier
+        cdf_values_upper = norm.cdf(-4 * self.sigma + (indices + 1) / self.multiplier, scale=self.sigma)
+        cdf_values_lower = norm.cdf(-4 * self.sigma + indices / self.multiplier, scale=self.sigma)
+        prior_v = cdf_values_upper - cdf_values_lower
 
         self.prior_v = prior_v
         print(f'priors sum to: {np.sum(self.prior_v)}')
@@ -442,6 +448,9 @@ class God():
         for i, v in enumerate(vec_v):
             prob += v_prior[i] * alpha * (norm.cdf(x=Pa - v, scale=sigma_w) - norm.cdf(x=Pb - v, scale=sigma_w))
 
+        # v_contributions = v_prior * alpha * (norm.cdf(Pa - np.array(vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(vec_v), scale=sigma_w))
+        # prob_informed = np.sum(v_contributions)
+        # prob = prob + prob_informed
         return prob
 
     def Pb_fp(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float,
@@ -542,9 +551,10 @@ class God():
 
         exp = Pa * psell + Pb * pbuy
         for i, v in enumerate(vec_v):
-            exp += v * v_prior[i] * alpha * (norm.cdf(x=Pa - v, scale=sigma_w) - norm.cdf(x=Pb - v,
-                                                                                          scale=sigma_w))  # effectively the prob true value is between the bid/ask
-
+            exp += v * v_prior[i] * alpha * (norm.cdf(x=Pa - v, scale=sigma_w) - norm.cdf(x=Pb - v, scale=sigma_w))  # effectively the prob true value is between the bid/ask
+        # v_contributions = vec_v * v_prior * alpha * (
+                    # norm.cdf(Pa - np.array(vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(vec_v), scale=sigma_w))
+        # exp += np.sum(v_contributions)
         return exp
 
     def comp_mr_indicator(self):
