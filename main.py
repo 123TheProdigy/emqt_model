@@ -240,7 +240,7 @@ class TradingAgent(Agent):
         self.true_value = true_val
 
     def decide_order(self):
-        if self.strategy is RandomStrategy or self.strategy is MomentumStrategy or self.strategy is NoiseStrategy or self.strategy is MeanReversionStrategy:
+        if isinstance(self.strategy, RandomStrategy) or isinstance(self.strategy, MomentumStrategy) or isinstance(self.strategy, NoiseStrategy) or isinstance(self.strategy, MeanReversionStrategy):
             signal = self.strategy.decide_order(self.prices)
         elif isinstance(self.strategy, UninformedStrategy):
             signal = self.strategy.decide_order()
@@ -252,8 +252,10 @@ class TradingAgent(Agent):
             return None
         if signal == 1:
             return Order(self.unique_id, signal, self.mm.curr_ask, 1)
-        else:
+        elif signal == -1:
             return Order(self.unique_id, signal, self.mm.curr_bid, 1)
+        else:
+            return None
 
     def order_failed(self, order: Order):
         """
@@ -311,6 +313,9 @@ class TradingAgent(Agent):
             self.pnl -= diff
 
     def step(self):
+        best_ask = self.mm.best_bids[-1].price
+        best_bid = self.mm.best_asks[-1].price
+        self.prices.append((best_ask + best_bid)/2)
         order = self.decide_order()
         if order is not None:
             self.send_order(order)
@@ -376,6 +381,8 @@ class MeanReversionStrategy:
         return mean_price
 
     def decide_order(self, price_history):
+        if price_history is None:
+            return
         mean_price = self.calculate_mean(price_history)
         if mean_price is None:
             return 0
@@ -411,7 +418,7 @@ class NoiseStrategy:
         returns = np.diff(np.log(price_history))
         X = np.vstack((np.ones_like(returns), np.arange(len(returns)))).T
         y = returns[1:]
-
+        
         params = np.linalg.lstsq(X, y, rcond=None)[0]
 
         # Drift is the intercept, volatility is the slope
@@ -419,9 +426,11 @@ class NoiseStrategy:
         self.volatility = params[1] / np.sqrt(self.dt)  # Adjust volatility for time step
 
     def decide_order(self, price_history):
+        if price_history is None:
+            return
         self.fit_parameters(price_history)
         dW = np.random.normal(loc=0, scale=np.sqrt(self.dt))
-        dS = self.drift * self.price * self.dt + self.volatility * self.price * dW
+        dS = self.drift * self.price[-1] * self.dt + self.volatility * self.price[-1] * dW
         # self.price += dS
 
         if dS > 0:
@@ -472,9 +481,11 @@ class MarketModel(Model):
     Market model to represent trading environment. 
     """
 
-    def __init__(self, N):
+    def __init__(self, N, informed = 0, noisy_informed = 0, noisy = 0, stoch_noisy = 0, mr = 0, mom = 0):
         """
-        Market model to handle agent interactions and other stuff 
+        Market model to handle agent interactions an d other stuff 
+
+        Intialize agents in order of this: informed -> noisy informed -> noisy -> stoch noisy -> MR -> MOM
         """
         self.num_agents = N
         self.schedule = RandomActivation(self)
@@ -487,23 +498,42 @@ class MarketModel(Model):
 
         self.schedule.add(self.book_keeper)
         self.schedule.add(self.market_maker)
+
+        r_inf = informed + 1 
+        r_noisyinf = r_inf + noisy_informed 
+        r_noisy = r_noisyinf + noisy
+        r_stoch = r_noisy + stoch_noisy
+        r_mr = r_stoch + mr
+        r_mom = r_mr + mom
+
+        print(r_inf, r_noisyinf, r_noisy, r_stoch, r_mr, r_mom)
+
         for i in range(1, self.num_agents + 1):
-            if i % 3 == 1:
-                agent_strategy = UninformedStrategy(eta=0.5)
-            elif i % 3 == 2: 
-                agent_strategy = NoisyInformedStrategy(sigma_w=.5)
-            else:
+            if i < r_inf and i > 0:
                 agent_strategy = InformedStrategy()
-            # agent_strategy = random.choice([UninformedStrategy(eta=0.5), NoisyInformedStrategy(sigma_w=.05), InformedStrategy()])
+            elif i < r_noisyinf and i >= r_inf:
+                agent_strategy = NoisyInformedStrategy(sigma_w = 0.5)
+            elif i < r_noisy and i >= r_noisyinf:
+                agent_strategy = UninformedStrategy(eta = 0.5)
+            elif i < r_stoch and i >= r_noisy:
+                agent_strategy = NoiseStrategy()
+            elif i < r_mr and i >= r_stoch:
+                agent_strategy = MeanReversionStrategy()
+            elif i < r_mom and i >= r_mr:
+                agent_strategy = MomentumStrategy()
+            else:
+                break
+
             a = TradingAgent(i, self, agent_strategy)
             self.directory[i] = a
             self.traders.append(a)
-            # self.schedule.add(a)
+
+            print(f'agent has strat {a.strategy}')
 
         self.book_keeper.get_directory(self.directory)
         self.running = True
-        self.god = God(tmax=15, sigma=0.50, jump_prob=0.1, alpha=0.5, beta=0.5, rho=0, theta=0,
-                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.5, V0=100, directory=self.directory)
+        self.god = God(tmax=20, sigma=0.50, jump_prob=0.075, alpha=.1, beta=.9, rho=0, theta=0,
+                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.33, V0=100, directory=self.directory)
 
     def step(self):
         self.god.run_and_advance()
@@ -521,45 +551,51 @@ def collect_price(model):
     return model.market_maker.price
 
 
-model = MarketModel(3)
-try:
-    for i in range(15):
-        print("Step number: ", i)
-        model.step()
-        # print("Price:", collect_price(model))
-    for key, value in model.directory.items():
-        print(f'agent {key} finished with PNL of {value.pnl}')
-        print(f'agent {key} finished with net position of {value.position}')
-except KeyboardInterrupt:
-    print("\n Simulation ended early \n")
+# model = MarketModel(10)
+# try:
+#     for i in range(20):
+#         print("Step number: ", i)
+#         model.step()
+#         # print("Price:", collect_price(model))
+#     for key, value in model.directory.items():
+#         print(f'agent {key} finished with PNL of {value.pnl:.2f}')
+#     for key, value in model.directory.items():
+#         print(f'agent {key} finished with net position of {value.position:.2f}')
+# except KeyboardInterrupt:
+#     print("\n Simulation ended early \n")
 
-finally:
-    god_data = model.god.return_data() # tuple of (true values, expected values, bids, asks)
+# finally:
+#     god_data = model.god.return_data() # tuple of (true values, expected values, bids, asks)
 
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+#     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
-    for key, value in model.directory.items():
-        axs[0, 0].plot(value.pnl_over_time, label = key)
-        axs[0, 1].plot(value.position_over_time, label = key)
-    axs[0, 0].legend()
-    axs[0, 0].set_title("agent PNL over time")
-    axs[0, 0].set_xlabel("iteration")
+#     for key, value in model.directory.items():
+#         axs[0, 0].plot(value.pnl_over_time, label = key)
+#         axs[0, 0].text(len(value.pnl_over_time) - 1, value.pnl_over_time[-1], key, ha='right', va='center')
 
-    axs[0, 1].legend()
-    axs[0, 1].set_title("agent positions over time")
-    axs[0, 1].set_xlabel("iteration")
+#         axs[0, 1].plot(value.position_over_time, label = key)
+#         axs[0, 1].text(len(value.position_over_time) - 1, value.position_over_time[-1], key, ha='right', va='center')
 
-    axs[1, 0].plot(god_data[0], label = "true value")
-    axs[1, 0].plot(god_data[1], label = "expected value")
-    axs[1, 0].legend()
-    axs[1, 0].set_title("true value vs expected value over time")
 
-    axs[1, 1].plot(god_data[0], label = "true value")
-    axs[1, 1].plot(god_data[2], label = "bids")
-    axs[1, 1].plot(god_data[1], label = "expected price")
-    axs[1, 1].plot(god_data[3], label = "asks")
-    axs[1, 1].legend()
-    axs[1, 1].set_title("spread around expected price over time")
+#     axs[0, 0].legend()
+#     axs[0, 0].set_title("agent PNL over time")
+#     axs[0, 0].set_xlabel("iteration")
 
-    plt.tight_layout()
-    plt.show()
+#     axs[0, 1].legend()
+#     axs[0, 1].set_title("agent positions over time")
+#     axs[0, 1].set_xlabel("iteration")
+
+#     axs[1, 0].plot(god_data[0], label = "true value")
+#     axs[1, 0].plot(god_data[1], label = "expected value")
+#     axs[1, 0].legend()
+#     axs[1, 0].set_title("true value vs expected value over time")
+
+#     axs[1, 1].plot(god_data[0], label = "true value")
+#     axs[1, 1].plot(god_data[2], label = "bids")
+#     axs[1, 1].plot(god_data[1], label = "expected price")
+#     axs[1, 1].plot(god_data[3], label = "asks")
+#     axs[1, 1].legend()
+#     axs[1, 1].set_title("spread around expected price over time")
+
+#     plt.tight_layout()
+#     plt.show()
