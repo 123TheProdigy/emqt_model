@@ -156,11 +156,12 @@ class Vi_prior():
         """
         Create vector of possible V_i. The 4 used in the calculations represents the number of std
         """
-        vec_v = []
-        for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
-            vec_v.append(self.center - 4 * self.sigma + (i / self.multiplier))
-        
-        self.vec_v = vec_v
+        # vec_v = []
+        # for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
+            # vec_v.append(self.center - 4 * self.sigma + (i / self.multiplier))
+        increments = np.arange(int(2 * 4 * self.sigma * self.multiplier + 1)) / self.multiplier
+        vec_v = self.center - 4 * self.sigma + increments
+        self.vec_v = vec_v.tolist()
         self.v_history.append(vec_v)
 
 
@@ -168,23 +169,30 @@ class Vi_prior():
         """
         Create vector of priors P(V=Vi) from CDF of gaussian with mean 0, std sigma
         """
-        prior_v = []
-        for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
-            prior_v.append(norm.cdf(x = -4 * self.sigma + (i+1)/self.multiplier, scale = self.sigma) 
-                           - norm.cdf(x = -4 * self.sigma + i/self.multiplier, scale = self.sigma))
-        
+        # prior_v = []
+        # for i in range(int(2 * 4 * self.sigma * self.multiplier + 1)):
+            # prior_v.append(norm.cdf(x=-4 * self.sigma + (i + 1) / self.multiplier, scale=self.sigma)
+                           # - norm.cdf(x=-4 * self.sigma + i / self.multiplier, scale=self.sigma))
+        num_values = int(2 * 4 * self.sigma * self.multiplier + 1)
+        indices = np.arange(num_values)
+        vec_v = self.center - 4 * self.sigma + indices / self.multiplier
+        cdf_values_upper = norm.cdf(-4 * self.sigma + (indices + 1) / self.multiplier, scale=self.sigma)
+        cdf_values_lower = norm.cdf(-4 * self.sigma + indices / self.multiplier, scale=self.sigma)
+        prior_v = cdf_values_upper - cdf_values_lower
+
         self.prior_v = prior_v
         print(f'priors sum to: {np.sum(self.prior_v)}')
         self.p_history.append(prior_v)
+
     
-    def compute_posterior(self, order_type: int, Pbuy: float, Psell: float, Pno: float, Pa: float, Pb: float, 
-                          alpha: float, beta: float, rho: float, theta: float, mr_true: int, mom_true: int, eta: float, 
+    def compute_posterior(self, order_type: int, Pbuy: float, Psell: float, Pno: float, Pa: float, Pb: float,
+                          alpha: float, beta: float, rho: float, theta: float, mr_true: int, mom_true: int, eta: float,
                           sigma_w: float, scale: float = 1) -> list:
         """
         Compute the posterior probability of P(V=Vi | Order), which represents the updated beliefs about the asset's true value
-        given a new trade has occurred. 
+        given a new trade has occurred.
 
-        To account for volume, we argue that the scaling follows a sigmoid centered at half the order size limit. 
+        To account for volume, we argue that the scaling follows a sigmoid centered at half the order size limit.
 
         order_type: 1, -1 or 0 respectively for buy, sell, or no order (no order also contains information)
         order_size: size of trade
@@ -196,20 +204,20 @@ class Vi_prior():
         alpha: proportion of informed trader (perfectly informed or noisy informed)
         beta: proportion of uninformed trader
         rho: proportion of mean reverting trader
-        theta: proportion of momentum trader 
-        mr_true: 1 if mean reverting signal positive else 0 
-        mom_true: 1 if momentum signal positive else 0 
-        eta: proba of buy/sell order for uninformed trader (again, the market maker is aware of the probabilstic structure 
+        theta: proportion of momentum trader
+        mr_true: 1 if mean reverting signal positive else 0
+        mom_true: 1 if momentum signal positive else 0
+        eta: proba of buy/sell order for uninformed trader (again, the market maker is aware of the probabilstic structure
                 of trading agents)
         sigma_w: std of noise distribution (gaussian) of noisy informed traders
-        scale: scaling factor, from the God class 
+        scale: scaling factor, from the God class
 
-        **NOTE: order_type should probably depend on a Trade object; there is high probability that at each iteration, at least one of 
+        **NOTE: order_type should probably depend on a Trade object; there is high probability that at each iteration, at least one of
                 the agents places a trade. Should investigate what happens here if we do not have any no orders. But given this mainly
-                concerns the informed traders, it should probably matter a decent amount 
+                concerns the informed traders, it should probably matter a decent amount
         """
         assert Pb < Pa, "ERROR: ask price is below bid price"
-        post = []
+        # post = []
 
         # if order_type == 1:
         #     for i, v in enumerate(self.vec_v):
@@ -232,25 +240,29 @@ class Vi_prior():
 
         if order_type == 1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
 
-            post = np.array(post)/Pbuy
+            # post = np.array(post)/Pbuy
+            post = (self.prior_v * ((1 - alpha) * eta + alpha * (1 - norm.cdf(Pa - np.array(self.vec_v), scale=sigma_w)))) / Pbuy
 
-        
+
         elif order_type == -1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
 
-            post = np.array(post)/Psell
+            # post = np.array(post)/Psell
+            post = (self.prior_v * ((1 - alpha) * eta + alpha * norm.cdf(Pb - np.array(self.vec_v), scale=sigma_w))) / Psell
+
 
         else:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+                # post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
 
-            post = np.array(post)/Pno
+            # post = np.array(post)/Pno
+            post = (self.prior_v * ((1 - 2 * eta) * beta + alpha * (norm.cdf(Pa - np.array(self.vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(self.vec_v), scale=sigma_w)) + rho * mr_true + theta * mom_true)) / Pno
 
         self.prior_v = post
         self.p_history.append(post)
@@ -259,6 +271,7 @@ class Vi_prior():
         # print(f'-------------------------Inside posterior: {post}')
 
         return post
+
 
 class God():
     """
@@ -362,12 +375,13 @@ class God():
 
         return val.dynamics["jumps"].to_list(), val.price(tmax=self.tmax).to_list() 
     
-    def P_buy(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+    def P_buy(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float,
+              sigma_w: float,
               vec_v: list, v_prior: list) -> float:
         """
         The a priori probability of a buy order at some ask price Pa
 
-        Pa: ask price to calculate probability of buy order occuring 
+        Pa: ask price to calculate probability of buy order occuring
         vec_v: vector of possible values for V_i
         v_prior: prior probability of V = V_i
         """
@@ -377,19 +391,21 @@ class God():
         #         result += (alpha * (1 - norm.cdf(Pa - v, scale = sigma_w)) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
         #     else:
         #         result += (alpha * norm.cdf(v - Pa, scale = sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
-    
-        result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
 
-        return result 
+        # result = (1-alpha)*eta
+        # for i, v in enumerate(vec_v):
+        # result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
+        result = (1 - alpha) * eta + alpha * np.sum(
+            (1 - norm.cdf(Pa - np.array(vec_v), scale=sigma_w)) * np.array(v_prior))
+        return result
 
-    def P_sell(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+
+    def P_sell(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float,
                vec_v: list, v_prior: list) -> float:
         """
         The a priori probability of a sell order at some bid price Pb
 
-        Pb: bid price to calculate probability of sell order occuring 
+        Pb: bid price to calculate probability of sell order occuring
         vec_v: vector of possible values for V_i
         v_prior: prior probability of V = V_i
 
@@ -402,11 +418,12 @@ class God():
         #     else:
         #         result += (alpha * norm.cdf(v - Pb, scale=self.sigma_w) + (beta) * eta + rho * mr + theta * mom) * v_prior[i]
 
-        result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
+        # result = (1-alpha)*eta
+        # for i, v in enumerate(vec_v):
+            # result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
+        result = (1 - alpha) * eta + alpha * np.sum(norm.cdf(Pb - np.array(vec_v), scale=sigma_w) * np.array(v_prior))
+        return result
 
-        return result 
 
     def P_no(self, Pb: float, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
              vec_v: float, v_prior: float):
@@ -428,12 +445,14 @@ class God():
 
         return prob
 
-    def Pb_fp(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+
+    def Pb_fp(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float,
+              sigma_w: float,
               vec_v: float, v_prior: float):
         """
         Fixed point equations to be solved using fixed point iteration
 
-        Pb: bid price 
+        Pb: bid price
         vec_v: vector of possible values for V_i
         v_prior: prior probability of V = V_i
         """
@@ -442,9 +461,9 @@ class God():
 
         vec_v = np.array(vec_v)
         v_prior = np.array(v_prior)
-        
+
         # cdf_values_below = norm.cdf(Pb - vec_v, scale = sigma_w)
-        # cdf_values_above = 1 - cdf_values_below ## fixed version 
+        # cdf_values_above = 1 - cdf_values_below ## fixed version
 
         # mask_below, mask_above = vec_v <= Pb, vec_v > Pb
         # expected_value_below = np.sum((beta * eta + alpha * cdf_values_below[mask_below]) * vec_v[mask_below] * v_prior[mask_below] + rho * mr + theta * mom)
@@ -453,21 +472,25 @@ class God():
         # print(f'INSIDE PB_FP THE P_BUY IS {p_sell}, EV BELOW IS {expected_value_below}, EV ABOVE IS {expected_value_above}')
         # result = expected_value_below + expected_value_above
 
-        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
-        result = sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
+        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0: "v", 1: "p"})
+        result = sum([((1 - alpha) * eta + alpha * norm.cdf(x=Pb - Vi, scale=sigma_w)) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
         # print(f'initial sum: {result}')
-        result += sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
+        result += sum([((1 - alpha) * eta + alpha * norm.cdf(x=Pb - Vi, scale=sigma_w)) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
 
         # print(f'iiiiiiiiii the result is {result}, the psell is {p_sell}')
 
-        return result / p_sell 
+        return result / p_sell
 
-    def Pa_fp(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float, 
+
+    def Pa_fp(self, Pa: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float,
+              sigma_w: float,
               vec_v: float, v_prior: float):
         """
         Fixed point equations to be solved using fixed point iteration
 
-        Pa: ask price 
+        Pa: ask price
         vec_v: vector of possible values for V_i
         v_prior: prior probability of V = V_i
         """
@@ -487,18 +510,29 @@ class God():
         # print(f'INSIDE PA_FP THE P_BUY IS {p_buy}, EV BELOW IS {expected_value_below}, EV ABOVE IS {expected_value_above}')
         # result = expected_value_below + expected_value_above
 
-        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
-        result = sum([((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-Vi, scale=sigma_w)))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pa]) 
-        result += sum([((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-Vi, scale=sigma_w)))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pa])
-                
+        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0: "v", 1: "p"})
+        result = sum([((1 - alpha) * eta + alpha * (1 - norm.cdf(x=Pa - Vi, scale=sigma_w))) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi <= Pa])
+        result += sum([((1 - alpha) * eta + alpha * (1 - norm.cdf(x=Pa - Vi, scale=sigma_w))) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi > Pa])
+
         return result / p_buy
-            
+
+
+    def sizing_factor(self, size, scale=.1):
+        a = 1 - self.alpha
+        b = self.eta
+        exponent = -scale * 3.36358566 * (a ** 2 / (b ** .25 + .25)) * (size - 10)  # center in middle
+        return (1 / (1 + math.exp(exponent))) + 0.5
+
+
     def sizing_factor(self, size, scale = .1):
         a = 1 - self.alpha
         b = self.eta
         exponent = -scale * 3.36358566 * (a**2/(b**.25 + .25)) * (size - 10) # center in middle
         return (1/(1+math.exp(exponent))) + 0.5
-    
+
+
     def compute_exp_true_value(self, Pb: float, Pa: float, psell: float, pbuy: float, vec_v: list, v_prior: list, alpha: float, eta: float, sigma_w: float) -> float:
         """
         Compute the expected value of the asset; only use informed traders? 

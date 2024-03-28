@@ -48,29 +48,32 @@ class Vi_prior():
         
         self.compute_vec_v(update_history=True) ## those 2 methods store the new vectors 
         self.compute_prior_v(update_history=True)
-    
-    
-    def compute_vec_v(self, update_history:Optional[bool]=True):
+
+
+    def compute_vec_v(self, update_history: Optional[bool] = True):
         '''
         This method creates the vector of possible values of v
         If the center changed: need to update it beforehand
-        
-        Args: 
-            - update_history: if True (default), the vector is added to a list with previous 
-            vectors to keep track of them 
+
+        Args:
+            - update_history: if True (default), the vector is added to a list with previous
+            vectors to keep track of them
         '''
 
-        vec_v = []
-        for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
-            vec_v.append(self.center-self.nb_sigma_range*self.sigma+i/self.multiplier)
-        
-        self.vec_v = vec_v
+        # vec_v = []
+        # for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
+        # vec_v.append(self.center-self.nb_sigma_range*self.sigma+i/self.multiplier)
+        # self.vec_v = vec_v
+        nb_values = int(2 * self.nb_sigma_range * self.sigma * self.multiplier + 1)
+        increments = np.arange(nb_values) / self.multiplier
+        vec_v = self.center - self.nb_sigma_range * self.sigma + increments
+        self.vec_v = vec_v.tolist()
 
         if update_history:
             self.v_history.append(vec_v)
 
 
-    def compute_prior_v(self, update_history:Optional[bool]=True):
+    def compute_prior_v(self, update_history: Optional[bool] = True):
         '''
         This method creates the vector of probas for v
 
@@ -79,34 +82,40 @@ class Vi_prior():
             vectors to keep track of them 
         '''
 
-        prior_v = []
-        for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
-            prior_v.append(norm.cdf(x=-self.nb_sigma_range*self.sigma+(i+1)/self.multiplier, scale=self.sigma) - norm.cdf(x=-self.nb_sigma_range*self.sigma+i/self.multiplier, scale=self.sigma))
-        
-        self.prior_v = prior_v
+        # prior_v = []
+        # for i in range(int(2*self.nb_sigma_range*self.sigma*self.multiplier+1)):
+        # prior_v.append(norm.cdf(x=-self.nb_sigma_range*self.sigma+(i+1)/self.multiplier, scale=self.sigma) - norm.cdf(x=-self.nb_sigma_range*self.sigma+i/self.multiplier, scale=self.sigma))
+
+        # self.prior_v = prior_v
+        nb_values = int(2 * self.nb_sigma_range * self.sigma * self.multiplier + 1)
+        increments = np.arange(nb_values) / self.multiplier
+        x_values = -self.nb_sigma_range * self.sigma + increments
+        prior_v = (norm.cdf(x=-self.nb_sigma_range * self.sigma + (increments + 1) / self.multiplier, scale=self.sigma)
+                   - norm.cdf(x=-self.nb_sigma_range * self.sigma + increments / self.multiplier, scale=self.sigma))
+        self.prior_v = prior_v.tolist()
+
         if update_history:
             self.p_history.append(prior_v)
 
 
-    
-    def compute_posterior(self, 
-                            order_type : int, 
-                            Pbuy : float, 
-                            Psell : float, 
-                            Pno : float, 
-                            Pa : float, 
-                            Pb : float, 
-                            alpha : float, 
-                            eta : float, 
-                            sigma_w : float, 
-                            update_prior : Optional[bool]=True, 
-                            update_v_vec : Optional[bool]=True) -> list:
-                    
+    def compute_posterior(self,
+                          order_type: int,
+                          Pbuy: float,
+                          Psell: float,
+                          Pno: float,
+                          Pa: float,
+                          Pb: float,
+                          alpha: float,
+                          eta: float,
+                          sigma_w: float,
+                          update_prior: Optional[bool] = True,
+                          update_v_vec: Optional[bool] = True) -> list:
+
         '''
         This methods computes the posterior or P(V=Vi) when trade info is received
         It will update the Market Maker belief of the true value
         Args:
-            - order_type: 1, -1 or 0 respectively for buy, sell, or no order 
+            - order_type: 1, -1 or 0 respectively for buy, sell, or no order
             (no order also contains information)
             - Pbuy: prior proba of receiving a buy order
             - Psell: prior proba of receiving a sell order
@@ -114,12 +123,12 @@ class Vi_prior():
             - Pa: ask price of the transaction
             - Pb: bid price of the transaction
             - alpha: proportion of informed trader (perfectly informed or noisy informed)
-            - eta: proba of buy/sell order for uninformed trader (again, the market maker is 
+            - eta: proba of buy/sell order for uninformed trader (again, the market maker is
             aware of the probabilstic structure of trading agents)
             - sigma_w: std of noise distribution (gaussian) of noisy informed traders
-            - update_prior: if True (default), will update the prior (as well as prior history) 
+            - update_prior: if True (default), will update the prior (as well as prior history)
         Output:
-            will return the posterior distribution 
+            will return the posterior distribution
         '''
 
         assert Pb < Pa, "ask price is below bid price"
@@ -128,26 +137,32 @@ class Vi_prior():
 
         if order_type == 1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+            # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-v, scale=sigma_w))))
 
-            post = np.array(post)/Pbuy
+            # post = np.array(post)/Pbuy
+            post = self.prior_v * ((1 - alpha) * eta + alpha * (1 - norm.cdf(Pa - self.vec_v, scale=sigma_w)))
+            post /= Pbuy
 
-        
         elif order_type == -1:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
+            # for i, v in enumerate(self.vec_v):
+            # post.append(self.prior_v[i]*((1-alpha)*eta + alpha*norm.cdf(x=Pb-v, scale=sigma_w)))
 
-            post = np.array(post)/Psell
+            # post = np.array(post)/Psell
+            post = self.prior_v * ((1 - alpha) * eta + alpha * norm.cdf(Pb - self.vec_v, scale=sigma_w))
+            post /= Psell
 
         else:
 
-            for i, v in enumerate(self.vec_v):
-                post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
+            # for i, v in enumerate(self.vec_v):
+            # post.append(self.prior_v[i]*((1-2*eta)*(1-alpha) + alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))))
 
-            post = np.array(post)/Pno
-            
+            # post = np.array(post)/Pno
+            post = self.prior_v * ((1 - 2 * eta) * (1 - alpha) + alpha * (
+                    norm.cdf(Pa - self.vec_v, scale=sigma_w) - norm.cdf(Pb - self.vec_v, scale=sigma_w)))
+            post /= Pno
+
         if update_prior:
             self.prior_v = post
             self.p_history.append(post)
@@ -155,6 +170,7 @@ class Vi_prior():
             self.v_history.append(self.vec_v)
 
         return post
+
 
 ##   Prior proba of selling
 
@@ -189,20 +205,21 @@ def P_sell(Pb : float,
     else:
 
         result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
-    
+        # for i, v in enumerate(vec_v):
+            # result += v_prior[i]*norm.cdf(x=Pb-v, scale=sigma_w)*alpha
+        result += np.sum(v_prior * norm.cdf(Pb - np.array(vec_v), scale=sigma_w) * alpha)
     return result
+
 
 ## fixed point equation for Bid price
 
-def Pb_fp(Pb : float, 
-            alpha : float, 
-            eta : float, 
-            sigma_w : float, 
-            vec_v:Optional[list], 
-            v_prior:Optional[list], 
-            known_value:Optional[float]=None) -> float:
+def Pb_fp(Pb: float,
+          alpha: float,
+          eta: float,
+          sigma_w: float,
+          vec_v: Optional[list],
+          v_prior: Optional[list],
+          known_value: Optional[float] = None) -> float:
     '''
     This is the fixed point equation for the bid price Pb
     Args:
@@ -218,24 +235,25 @@ def Pb_fp(Pb : float,
 
     ## compute prior proba of sell order
     psell = P_sell(Pb=Pb, alpha=alpha, eta=eta, sigma_w=sigma_w, vec_v=vec_v, v_prior=v_prior, known_value=known_value)
-    
+
     if known_value is not None:
         assert known_value > 0, "known value is negative, cannot compute P_sell"
         if known_value <= Pb:
-            result = ((1-alpha)*eta + alpha*norm.cdf(x=Pb-known_value, scale=sigma_w))*known_value
+            result = ((1 - alpha) * eta + alpha * norm.cdf(x=Pb - known_value, scale=sigma_w)) * known_value
         else:
-            result = ((1-alpha)*eta + alpha*(1-norm.cdf(x=known_value-Pb, scale=sigma_w)))*known_value
-            
+            result = ((1 - alpha) * eta + alpha * (1 - norm.cdf(x=known_value - Pb, scale=sigma_w))) * known_value
+
     else:
 
-        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
+        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0: "v", 1: "p"})
 
-        result = sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
+        result = sum([((1 - alpha) * eta + alpha * norm.cdf(x=Pb - Vi, scale=sigma_w)) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi <= Pb])
 
-        result += sum([((1-alpha)*eta + alpha*norm.cdf(x=Pb-Vi, scale=sigma_w))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
+        result += sum([((1 - alpha) * eta + alpha * norm.cdf(x=Pb - Vi, scale=sigma_w)) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi > Pb])
 
-    return result/psell
-
+    return result / psell
 
 
 ##   Prior proba of buying
@@ -271,11 +289,11 @@ def P_buy(Pa : float,
     else:
 
         result = (1-alpha)*eta
-        for i, v in enumerate(vec_v):
-            result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
+        # for i, v in enumerate(vec_v):
+            # result += alpha * (1 - norm.cdf(x=Pa - v, scale=sigma_w)) * v_prior[i]
+        result += np.sum(alpha * (1 - norm.cdf(Pa - np.array(vec_v), scale=sigma_w)) * np.array(v_prior))
 
     return result
-
 
 
 ##   Prior proba of no order
@@ -306,24 +324,24 @@ def P_no_order(Pb : float,
 
     prob = (1-alpha)*(1-2*eta) ## part of uninformed traders
 
-    for i, v in enumerate(vec_v):
+    # for i, v in enumerate(vec_v):
 
-        prob += v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))
+        # prob += v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))
+
+    prob += np.sum(v_prior * alpha * (norm.cdf(Pa - np.array(vec_v), scale=sigma_w) - norm.cdf(Pb - np.array(vec_v), scale=sigma_w)))
 
     return prob
 
 
-
-
 ## fixed point equation for ask price
 
-def Pa_fp(Pa : float, 
-            alpha : float,
-            eta : float, 
-            sigma_w : float, 
-            vec_v: list, 
-            v_prior: list, 
-            known_value:Optional[float]=None) -> float:
+def Pa_fp(Pa: float,
+          alpha: float,
+          eta: float,
+          sigma_w: float,
+          vec_v: list,
+          v_prior: list,
+          known_value: Optional[float] = None) -> float:
     '''
     This is the fixed point equation for the ask price Pa
     Args:
@@ -337,43 +355,42 @@ def Pa_fp(Pa : float,
     Output:
         - the ask price solution of the FP equation
     '''
-    
-    
+
     # prior proba of buying order arriving
     pbuy = P_buy(Pa=Pa, alpha=alpha, eta=eta, sigma_w=sigma_w, vec_v=vec_v, v_prior=v_prior, known_value=known_value)
 
     if known_value is not None:
         assert known_value > 0, "known value is negative, cannot compute P_buy"
         if known_value <= Pa:
-            result = ((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-known_value, scale=sigma_w)))*known_value
+            result = ((1 - alpha) * eta + alpha * (1 - norm.cdf(x=Pa - known_value, scale=sigma_w))) * known_value
         else:
-            result = ((1-alpha)*eta + alpha*norm.cdf(x=known_value-Pa, scale=sigma_w))*known_value
-            
-    
+            result = ((1 - alpha) * eta + alpha * norm.cdf(x=known_value - Pa, scale=sigma_w)) * known_value
+
+
     else:
 
-        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0:"v", 1:"p"})
+        prior_on_v = pd.DataFrame(data=[vec_v, v_prior]).T.rename(columns={0: "v", 1: "p"})
 
-        result = sum([((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-Vi, scale=sigma_w)))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi <= Pa]) 
+        result = sum([((1 - alpha) * eta + alpha * (1 - norm.cdf(x=Pa - Vi, scale=sigma_w))) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi <= Pa])
 
-        result += sum([((1-alpha)*eta + alpha*(1-norm.cdf(x=Pa-Vi, scale=sigma_w)))*Vi*(prior_on_v[prior_on_v["v"]==Vi]["p"].item()) for Vi in vec_v if Vi > Pa])
-                
-    return result/pbuy
+        result += sum([((1 - alpha) * eta + alpha * (1 - norm.cdf(x=Pa - Vi, scale=sigma_w))) * Vi * (
+            prior_on_v[prior_on_v["v"] == Vi]["p"].item()) for Vi in vec_v if Vi > Pa])
 
-
+    return result / pbuy
 
 
 ## expectation of true value
 
-def compute_exp_true_value(Pb : float, 
-                            Pa : float, 
-                            psell : float, 
-                            pbuy : float, 
-                            vec_v : list, 
-                            v_prior : list, 
-                            alpha : float,
-                            eta : float,
-                            sigma_w : float) -> float:
+def compute_exp_true_value(Pb: float,
+                           Pa: float,
+                           psell: float,
+                           pbuy: float,
+                           vec_v: list,
+                           v_prior: list,
+                           alpha: float,
+                           eta: float,
+                           sigma_w: float) -> float:
     '''
     This methods compute the expected value of the asset 
     Args:
@@ -386,17 +403,17 @@ def compute_exp_true_value(Pb : float,
         - alpha: proportion of informed traders
         - eta: proportion of buy/sell orders from uninformed traders
         - sigma_w: std of noise of noisy informed traders 
-    
+
     Output:
         - expected value
     '''
 
-    exp = Pa*psell + Pb*pbuy ## expected value conditionned on buying order, selling order
+    exp = Pa * psell + Pb * pbuy  ## expected value conditionned on buying order, selling order
 
     for i, v in enumerate(vec_v):
         ## expected value conditionned on no order arriving (was not already computed)
-        exp += v*v_prior[i]*alpha*(norm.cdf(x=Pa-v, scale=sigma_w) - norm.cdf(x=Pb-v, scale=sigma_w))
-    
+        exp += v * v_prior[i] * alpha * (norm.cdf(x=Pa - v, scale=sigma_w) - norm.cdf(x=Pb - v, scale=sigma_w))
+
     return exp
 
 
@@ -560,8 +577,6 @@ class GMD_simluation():
 
         self.jumps = val.dynamics["jumps"].to_list()
         self.true_value = val.price(tmax=self.tmax).to_list() 
-
-
 
 
     def run_simulation(self):

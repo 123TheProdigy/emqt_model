@@ -437,9 +437,7 @@ class NoiseStrategy:
             self.volatility = 0
         else:
             X = np.vstack((np.ones_like(returns), np.arange(len(returns)))).T
-            print("start")
-            print(returns)
-            print(X)
+
             x_mean = np.mean(X[:, 1])
             returns_mean = np.mean(returns)
 
