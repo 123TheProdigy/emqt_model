@@ -26,10 +26,10 @@ def prepare_environment(parameter_sets):
             os.makedirs(os.path.join(param_dir, subfolder))
 
 # informed = 0, noisy_informed = 0, noisy = 0, stoch_noisy = 0, mr = 0, mom = 0
-parameter_sets = [{"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 1, "mom": 0}, #3
-                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 0, "mom": 1}, #3
-                  {"informed": 0, "noisy_informed": 6, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0}, #3
-                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 6, "mr": 0, "mom": 0}] #3
+parameter_sets = [{"informed": 6, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0}, #2
+                  {"informed": 1, "noisy_informed": 1, "noisy": 1, "stoch_noisy": 1, "mr": 1, "mom": 1}, #2
+                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 2, "mr": 2, "mom": 2}, #2
+                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 1, "mr": 0, "mom": 0}] #2
 
 # parameter_sets = [{"informed": 0, "noisy_informed": 0, "noisy": 6, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
 #                   {"informed": 1, "noisy_informed": 0, "noisy": 5, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
@@ -72,12 +72,12 @@ def aggregate_results(model, sim_num):
 
     return pd.DataFrame([data])
 
-def run_simulation(parameter_set, set_index, num_simulations=100):
+def run_simulation(parameter_set, set_index, num_simulations=10):
     base_dir = f"simulation_data/param_set_{set_index}"
     results = pd.DataFrame()
     
     print(f'running set {parameter_set}')
-    for sim_num in tqdm(range(0, num_simulations), desc = "Outer number of simulations", position = 0):  
+    for sim_num in tqdm(range(0, num_simulations), desc = "Outer number of simulations", position = 0):
         model = MarketModel(6, **parameter_set)
         for i in tqdm(range(100), desc = "Inner sims inside a sim", position = 1, miniters = 1):
             model.step()

@@ -397,7 +397,7 @@ class God():
         # result += alpha*(1-norm.cdf(x=Pa-v,scale=sigma_w))*v_prior[i]
         result = (1 - alpha) * eta + alpha * np.sum(
             (1 - norm.cdf(Pa - np.array(vec_v), scale=sigma_w)) * np.array(v_prior))
-        return result
+        return max(1e-10, result)  # result is 0 when all 6 are informed and causes divide by 0 error later
 
 
     def P_sell(self, Pb: float, alpha: float, beta: float, rho: float, theta: float, mr: int, mom: int, eta: float, sigma_w: float,

@@ -497,7 +497,7 @@ class MarketModel(Model):
     Market model to represent trading environment. 
     """
 
-    def __init__(self, N, informed = 0, noisy_informed = 0, noisy = 0, stoch_noisy = 0, mr = 0, mom = 0):
+    def __init__(self, N, informed = 0, noisy_informed = 0, noisy = 0, stoch_noisy = 0, mr = 0, mom = 0, max_iters = 100):
         """
         Market model to handle agent interactions an d other stuff 
 
@@ -548,8 +548,12 @@ class MarketModel(Model):
 
         self.book_keeper.get_directory(self.directory)
         self.running = True
-        self.god = God(tmax=20, sigma=0.50, jump_prob=0.075, alpha=.1, beta=.9, rho=0, theta=0,
-                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.33, V0=100, directory=self.directory)
+        self.alpha = max(0.01, (informed + noisy_informed) / N)
+        self.beta = max(0.01, (noisy + stoch_noisy) / N)
+        self.rho = mr / N
+        self.theta = mom / N
+        self.god = God(tmax=max_iters, sigma=0.50, jump_prob=0.1, alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta,
+                       mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.05, V0=100, directory=self.directory)
 
     def step(self):
         self.god.run_and_advance()
