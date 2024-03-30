@@ -51,7 +51,7 @@ prepare_environment(parameter_sets)
 
 def aggregate_results(model, sim_num):
     data = {
-        'Simulation': [sim_num] * list(range(100)),
+        'Simulation': sim_num,
         'TrueValue': model.god.return_data()[0],
         'ExpectedValue': model.god.return_data()[1],
         'Bids' : model.god.return_data()[2], 
@@ -59,27 +59,27 @@ def aggregate_results(model, sim_num):
     }
 
     for agent_id, agent in model.directory.items():
-        if agent_id == 1:
-            col_pnl = f"agent1_MM_pnl"
-            col_pos = f"agent1_MM_pos"
+        if agent_id == 0:
+            col_pnl = f"agent0_MM_pnl"
+            col_pos = f"agent0_MM_pos"
         else:
             strategy_type = type(agent.strategy).__name__
             col_pnl = f"agent{agent_id}_{strategy_type}_pnl" 
             col_pos = f"agent{agent_id}_{strategy_type}_pos"
         
         data[col_pnl] = agent.pnl_over_time
-        data[col_pos] = agent.pos_over_time
+        data[col_pos] = agent.position_over_time
 
     return pd.DataFrame([data])
 
 def run_simulation(parameter_set, set_index, num_simulations=10):
     base_dir = f"simulation_data/param_set_{set_index}"
     results = pd.DataFrame()
-    
+    max_iters = 100
     print(f'running set {parameter_set}')
     for sim_num in tqdm(range(0, num_simulations), desc = "Outer number of simulations", position = 0):
-        model = MarketModel(6, **parameter_set)
-        for i in tqdm(range(100), desc = "Inner sims inside a sim", position = 1, miniters = 1):
+        model = MarketModel(6, **parameter_set, max_iters = max_iters)
+        for i in tqdm(range(max_iters), desc = "Inner sims inside a sim", position = 1, miniters = 1):
             model.step()
         
         sim_results = aggregate_results(model, sim_num)
