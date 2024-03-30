@@ -375,19 +375,14 @@ class MeanReversionStrategy:
         self.threshold = threshold
 
     def calculate_mean(self, price_history):
-        if len(price_history) < self.window_size:
-            return None
-
-        mean_price = sum(price_history) / len(price_history)
+        mean_price = sum(price_history[-self.window_size:]) / self.window_size
         return mean_price
 
     def decide_order(self, price_history):
-        if price_history is None:
-            return
-        mean_price = self.calculate_mean(price_history)
-        if mean_price is None:
+        if price_history is None or len(price_history) < self.window_size:
             return 0
 
+        mean_price = self.calculate_mean(price_history)
         current_price = price_history[-1]
         deviation = current_price - mean_price
 
