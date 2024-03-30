@@ -21,21 +21,21 @@ def prepare_environment(parameter_sets):
             os.makedirs(os.path.join(param_dir, subfolder))
 
 # informed = 0, noisy_informed = 0, noisy = 0, stoch_noisy = 0, mr = 0, mom = 0
-parameter_sets = [{"informed": 0, "noisy_informed": 0, "noisy": 6, "stoch_noisy": 0, "mr": 0, "mom": 0},
-                  {"informed": 1, "noisy_informed": 0, "noisy": 5, "stoch_noisy": 0, "mr": 0, "mom": 0},
-                  {"informed": 1, "noisy_informed": 5, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0},
-                  {"informed": 1, "noisy_informed": 2, "noisy": 3, "stoch_noisy": 0, "mr": 0, "mom": 0},
-                  {"informed": 6, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0},
-                  {"informed": 1, "noisy_informed": 1, "noisy": 1, "stoch_noisy": 1, "mr": 1, "mom": 1},
-                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 2, "mr": 2, "mom": 2},
-                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 1, "mr": 0, "mom": 0},
-                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 1, "mom": 0},
-                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 0, "mom": 1},
-                  {"informed": 0, "noisy_informed": 6, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0},
-                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 6, "mr": 0, "mom": 0},
-                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 6, "mom": 0},
-                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 6},
-                  {"informed": 2, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 0, "mom": 0}]  
+parameter_sets = [{"informed": 0, "noisy_informed": 0, "noisy": 6, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
+                  {"informed": 1, "noisy_informed": 0, "noisy": 5, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
+                  {"informed": 1, "noisy_informed": 5, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1 
+                  {"informed": 1, "noisy_informed": 2, "noisy": 3, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
+                  {"informed": 6, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0}, #2
+                  {"informed": 1, "noisy_informed": 1, "noisy": 1, "stoch_noisy": 1, "mr": 1, "mom": 1}, #2
+                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 2, "mr": 2, "mom": 2}, #2
+                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 1, "mr": 0, "mom": 0}, #2
+                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 1, "mom": 0}, #3
+                  {"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 0, "mom": 1}, #3
+                  {"informed": 0, "noisy_informed": 6, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0}, #3
+                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 6, "mr": 0, "mom": 0}, #3
+                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 6, "mom": 0}, #4
+                  {"informed": 0, "noisy_informed": 0, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 6}, #4
+                  {"informed": 2, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 0, "mr": 0, "mom": 0}] #4
 
 prepare_environment(parameter_sets)
 
@@ -77,10 +77,8 @@ def run_simulation(parameter_set, set_index, num_simulations=100):
         results = pd.concat([results, sim_results], ignore_index=True)
 
     results.to_csv(os.path.join(base_dir, "aggregated_results.csv"), index=False)
-
-run_simulation(parameter_sets[5], 6)
         
-# for i, params in enumerate(parameter_sets, start=1):
-#     run_simulation(params, i)
+for i, params in enumerate(parameter_sets, start=1):
+    run_simulation(params, i)
 
 print("Simulation runs complete.")
