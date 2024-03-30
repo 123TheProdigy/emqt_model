@@ -181,7 +181,7 @@ class Vi_prior():
         prior_v = cdf_values_upper - cdf_values_lower
 
         self.prior_v = prior_v
-        print(f'priors sum to: {np.sum(self.prior_v)}')
+        # print(f'priors sum to: {np.sum(self.prior_v)}')
         self.p_history.append(prior_v)
 
     
@@ -618,7 +618,7 @@ class God():
 
         Need to create senders and receivers for messages to MM and traders 
         """
-        print(f"++++++++++trade processing at time {self.i}++++++++++")
+        # print(f"++++++++++trade processing at time {self.i}++++++++++")
         if (self.i == 0):
             self.v_distrib = Vi_prior(sigma = 0.5, centered_at = self.V0, multiplier = self.multiplier)
             # print(f'initial prior distribution is: {self.v_distrib.vec_v[-1]} with probs {self.v_distrib.v_history[-1]}')
@@ -656,7 +656,7 @@ class God():
         curr_bid = round(curr_bid, 2)
         self.bids.append(curr_bid)
 
-        print(f'current bid, ask from inside God: {round(curr_bid,2), round(curr_ask, 2)}')
+        # print(f'current bid, ask from inside God: {round(curr_bid,2), round(curr_ask, 2)}')
 
         self.Pbuy = self.P_buy(Pa=self.asks[-1], alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta, 
                           mr=self.mr_indicator, mom=self.mom_indicator, eta=self.eta, sigma_w=self.sigma_w, 

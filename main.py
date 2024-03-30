@@ -90,7 +90,7 @@ class BookKeeper(Agent):
         
         ## no concurrency yet 
         for order in self.market_orders:
-            print(f'market order: {order} with side {order.side}')
+            # print(f'market order: {order} with side {order.side}')
             if order.side == Side.BUY:
                 while order.quantity > 0 and self.ask_book:
                     best_ask = next(iter(self.ask_book.keys()))
@@ -101,7 +101,7 @@ class BookKeeper(Agent):
                     agent = self.directory[order.agent_id]
                     agent.order_filled(self.trades[-1], order)
                     # print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 1')
-                    print(f'order has been filled at {best_ask}')
+                    # print(f'order has been filled at {best_ask}')
 
                     order.quantity -= vol
                     self.ask_book[best_ask][0] -= vol
@@ -117,7 +117,7 @@ class BookKeeper(Agent):
 
                     self.trades.append(Trade(best_bid, vol, order.agent_id, "market_maker", self.time))
                     agent = self.directory[order.agent_id]
-                    print(f'order has been filled at {best_bid} with quantity {vol}')
+                    # print(f'order has been filled at {best_bid} with quantity {vol}')
                     agent.order_filled(self.trades[-1], order)
                     # print(f'ARE WE IN THIS LOOP EVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR 2')
 
@@ -196,7 +196,7 @@ class MarketMaker(Agent):
     def step(self):
         self.book_keeper.receive_limit_order(self.best_bids[-1])
         self.book_keeper.receive_limit_order(self.best_asks[-1])
-        print(f'inserting bid, ask of {self.best_bids[-1], [self.best_asks[-1]]}')
+        # print(f'inserting bid, ask of {self.best_bids[-1], [self.best_asks[-1]]}')
         self.book_keeper.process_market_orders()
         self.pnl_over_time.append(self.pnl)
         self.position_over_time.append(self.position)
@@ -248,7 +248,7 @@ class TradingAgent(Agent):
         elif isinstance(self.strategy, NoisyInformedStrategy) or isinstance(self.strategy, InformedStrategy):
             signal = self.strategy.decide_order(self.mm.curr_bid, self.mm.curr_ask, self.true_value)
 
-        print(f'-----------------the signal is {signal}')
+        # print(f'-----------------the signal is {signal}')
         if signal == 0:
             return None
         if signal == 1:
@@ -527,7 +527,7 @@ class MarketModel(Model):
         r_mr = r_stoch + mr
         r_mom = r_mr + mom
 
-        print(r_inf, r_noisyinf, r_noisy, r_stoch, r_mr, r_mom)
+        # print(r_inf, r_noisyinf, r_noisy, r_stoch, r_mr, r_mom)
 
         for i in range(1, self.num_agents + 1):
             if i < r_inf and i > 0:
@@ -549,7 +549,7 @@ class MarketModel(Model):
             self.directory[i] = a
             self.traders.append(a)
 
-            print(f'agent has strat {a.strategy}')
+            # print(f'agent has strat {a.strategy}')
 
         self.book_keeper.get_directory(self.directory)
         self.running = True
