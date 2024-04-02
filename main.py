@@ -549,7 +549,7 @@ class MarketModel(Model):
         self.book_keeper.get_directory(self.directory)
         self.running = True
         self.alpha = max(0.01, (informed + noisy_informed) / N)
-        self.beta = max(0.01, (noisy + stoch_noisy) / N)
+        self.beta = max(0.01, (noisy + stoch_noisy + mr + mom) / N)
         self.rho = mr / N
         self.theta = mom / N
         self.god = God(tmax=max_iters, sigma=0.50, jump_prob=0.1, alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta,
