@@ -1,0 +1,57 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(stats)
+```
+
+
+
+
+```{r}
+values <- unlist(aggregated_results[1, 2])
+#indices <- 1:length(values)
+#print(values)
+#numeric_values <- as.numeric(values)
+clean_str <- gsub("\\[|\\]", "", values)
+Values <- strsplit(clean_str, ", ")[[1]]
+print(Values)
+#Values <- eval(parse(text = values))
+X <- 1:100
+plot(X, Values, type = "l", pch = 16, col = "blue", main = "Scatter Plot of Values", xlab = "Index", ylab = "Value")
+
+#fit <- lm(Values ~ X)
+#abline(fit, col = "red")
+```
+
+
+
+```{r}
+install.packages("reticulate")
+library(reticulate)
+```
+
+```{r}
+# Load the pickle file using Python's pickle module
+py <- import_builtins()
+pickle <- py$pickle
+file_path <- "/Users/wanyisu/Desktop/simulation_1.pkl"  # Replace "your_file_path.pkl" with the path to your pickle file
+
+# Load the pickle file
+with(pickle$load(open(file_path, "rb")), {
+  # Access the objects stored in the pickle file
+  # For example, if your pickle file contains a variable named 'data', you can access it like this:
+  data <- data
+})
+```
+
+
+
+
+
+
+
