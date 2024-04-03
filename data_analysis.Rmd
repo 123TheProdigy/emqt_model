@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Data Analysis and Game Theory"
 output: html_notebook
 ---
 
@@ -9,47 +9,386 @@ library(dplyr)
 library(stats)
 ```
 
-
-
+### True value in set1, sim1
 
 ```{r}
-values <- unlist(aggregated_results[1, 2])
-#indices <- 1:length(values)
-#print(values)
-#numeric_values <- as.numeric(values)
-clean_str <- gsub("\\[|\\]", "", values)
-Values <- strsplit(clean_str, ", ")[[1]]
-print(Values)
-#Values <- eval(parse(text = values))
-X <- 1:100
-plot(X, Values, type = "l", pch = 16, col = "blue", main = "Scatter Plot of Values", xlab = "Index", ylab = "Value")
+TrueValue_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[1, 2])), ", ")[[1]]
+#average <- mean(TrueValues_set1)
+plot(TrueValue_set1, type = "l", pch = 16, col = "blue", main = "True Values in sim0", xlab = "Iteration", ylab = "Value")
+
+#TrueValue_set1_sim0 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[1, 2])), ", ")[[1]]
+#unlist(aggregated_results_1[1, 2])
+#clean_str = gsub("\\[|\\]", "", TrueValue_sim0)
+#TrueValue_set1_sim1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[2, 2])), ", ")[[1]]
+
+#print(Values)
+#X <- 1:100
+#plot(TrueValue_set1_sim0, type = "l", pch = 16, col = "blue", main = "True Values in sim0", xlab = "Iteration", ylab = "Value")
+#plot(TrueValue_set1_sim1, type = "l", pch = 16, col = "blue", main = "True Values in sim1", xlab = "Iteration", ylab = "Value")
 
 #fit <- lm(Values ~ X)
 #abline(fit, col = "red")
 ```
+### True values in set 1, all sim
+
+```{r}
+# Initialize an empty vector to store the True values
+TrueValues_set1 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_1 dataframe
+  TrueValue_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 2])), ", ")[[1]]
+  
+  # Append the True values to the vector
+  TrueValues_set1 <- c(TrueValues_set1, as.numeric(TrueValue_set1))
+}
+
+# Calculate the average of True values
+average <- mean(TrueValues_set1)
+
+# Plot the average
+plot(TrueValues_set1, type = "l", pch = 16, col = "blue", main = "True Values in set 1", xlab = "Iteration", ylab = "Value")
+
+# Add a horizontal line for the average
+abline(h = average, col = "red", lwd = 2)
+
+```
+
+### Expected value in set1, all sim
+
+```{r}
+# Initialize an empty vector to store the True values
+ExpectedValues_set1 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_1 dataframe
+  ExpectedValue_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 3])), ", ")[[1]]
+  
+  # Append the True values to the vector
+  ExpectedValues_set1 <- c(ExpectedValues_set1, as.numeric(ExpectedValue_set1))
+}
+
+# Calculate the average of True values
+average <- mean(ExpectedValues_set1)
+
+# Plot the average
+plot(ExpectedValues_set1, type = "l", pch = 16, col = "blue", main = "Expected Values in set 1", xlab = "Iteration", ylab = "Value")
+
+# Add a horizontal line for the average
+abline(h = average, col = "red", lwd = 2)
+
+```
+
+### True and Expected Values in set 1
+
+```{r}
+# Initialize empty vectors to store true and expected values
+TrueValues_set1 <- numeric()
+ExpectedValues_set1 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_1 dataframe
+  TrueValue_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 2])), ", ")[[1]]
+  
+  # Extract Expected values from the aggregated_results_1 dataframe
+  ExpectedValue_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 3])), ", ")[[1]]
+  
+  # Append the True and Expected values to their respective vectors
+  TrueValues_set1 <- c(TrueValues_set1, as.numeric(TrueValue_set1))
+  ExpectedValues_set1 <- c(ExpectedValues_set1, as.numeric(ExpectedValue_set1))
+}
+
+# Calculate the average of True values
+average_true <- mean(TrueValues_set1)
+
+# Calculate the average of Expected values
+average_expected <- mean(ExpectedValues_set1)
+
+# Plot True and Expected values on the same plot
+plot(TrueValues_set1, type = "l", pch = 16, col = "blue", main = "True vs Expected Values in set 1", xlab = "Iteration", ylab = "Value")
+lines(ExpectedValues_set1, type = "l", pch = 16, col = "red")
+
+# Add legend
+legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
+
+# Add horizontal lines for the averages
+abline(h = average_true, col = "blue", lwd = 1)
+abline(h = average_expected, col = "red", lwd = 1)
+```
+
+### Bids in set1, sim1
+
+
+```{r}
+Bids_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[1, 4])), ", ")[[1]]
+#average <- mean(TrueValues_set1)
+plot(Bids_set1, type = "l", pch = 16, col = "blue", main = "True Values in sim0", xlab = "Iteration", ylab = "Value")
+```
+
+### Bids in set 1, all sim
+
+```{r}
+# Initialize an empty vector to store the True values
+Bids_set1 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_1 dataframe
+  Bid_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 4])), ", ")[[1]]
+  
+  # Append the True values to the vector (corrected typo)
+  Bids_set1 <- c(Bids_set1, as.numeric(Bid_set1))
+}
+
+# Check if the vector is properly populated
+#print(Bids_set1)
+
+# Calculate the average of True values
+average <- mean(Bids_set1, na.rm = TRUE)
+
+# Plot the values
+plot(Bids_set1, type = "l", pch = 16, col = "blue", main = "Expected Values in set 1", xlab = "Iteration", ylab = "Value")
+
+# Add a horizontal line for the average
+abline(h = average, col = "red", lwd = 2)
+
+```
+
+### Bids and Asks Overall
+
+```{r}
+# Initialize empty vectors to store the Bid and Ask values
+Bids_set1 <- numeric()
+Asks_set1 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract Bid values from the aggregated_results_1 dataframe
+  Bid_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 4])), ", ")[[1]]
+  
+  # Extract Ask values from the aggregated_results_1 dataframe (next column)
+  Ask_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 5])), ", ")[[1]]
+  
+  # Append the Bid and Ask values to their respective vectors
+  Bids_set1 <- c(Bids_set1, as.numeric(Bid_set1))
+  Asks_set1 <- c(Asks_set1, as.numeric(Ask_set1))
+}
+
+# Calculate the average of Bid and Ask values
+average_bids <- mean(Bids_set1, na.rm = TRUE)
+average_asks <- mean(Asks_set1, na.rm = TRUE)
+
+# Plot the Bid and Ask values on the same plot
+plot(Bids_set1, type = "l", pch = 16, col = "blue", main = "Bids vs Asks in set 1", xlab = "Iteration", ylab = "Value")
+lines(Asks_set1, type = "l", pch = 16, col = "red")
+
+# Add legend
+legend("topright", legend = c("Bids", "Asks"), col = c("blue", "red"), lty = 1, cex = 0.8)
+
+# Add horizontal lines for the averages
+abline(h = average_bids, col = "blue", lty = 1)
+abline(h = average_asks, col = "red", lty = 1)
+
+```
+
+### Present to Dr. Miller
+
+```{r}
+# Initialize empty vectors to store true and expected values
+TrueValues_set4 <- numeric()
+ExpectedValues_set4 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_1 dataframe
+  TrueValue_set4 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 2])), ", ")[[1]]
+  
+  # Extract Expected values from the aggregated_results_1 dataframe
+  ExpectedValue_set4 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 3])), ", ")[[1]]
+  
+  # Append the True and Expected values to their respective vectors
+  TrueValues_set4 <- c(TrueValues_set4, as.numeric(TrueValue_set4))
+  ExpectedValues_set4 <- c(ExpectedValues_set4, as.numeric(ExpectedValue_set4))
+}
+
+# Calculate the average of True values
+average_true <- mean(TrueValues_set4)
+
+# Calculate the average of Expected values
+average_expected <- mean(ExpectedValues_set4)
+
+# Plot True and Expected values on the same plot
+plot(TrueValues_set4, type = "l", pch = 16, col = "blue", main = "True vs Expected Values in set 4", xlab = "Iteration", ylab = "Value")
+lines(ExpectedValues_set4, type = "l", pch = 16, col = "red")
+
+# Add legend
+legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
+
+# Add horizontal lines for the averages
+abline(h = average_true, col = "blue", lwd = 1)
+abline(h = average_expected, col = "red", lwd = 1)
+```
+
+
+```{r}
+# Initialize empty vectors to store the Bid and Ask values
+Bids_set4 <- numeric()
+Asks_set4 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+  # Extract Bid values from the aggregated_results_1 dataframe
+  Bid_set4 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 4])), ", ")[[1]]
+  
+  # Extract Ask values from the aggregated_results_1 dataframe (next column)
+  Ask_set4 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 5])), ", ")[[1]]
+  
+  # Append the Bid and Ask values to their respective vectors
+  Bids_set4 <- c(Bids_set4, as.numeric(Bid_set4))
+  Asks_set4 <- c(Asks_set4, as.numeric(Ask_set4))
+}
+
+# Calculate the average of Bid and Ask values
+average_bids <- mean(Bids_set4, na.rm = TRUE)
+average_asks <- mean(Asks_set4, na.rm = TRUE)
+
+# Plot the Bid and Ask values on the same plot
+plot(Bids_set4, type = "l", pch = 16, col = "blue", main = "Bids vs Asks in set 4", xlab = "Iteration", ylab = "Value", ylim = c(min(c(Bids_set4, Asks_set4)), max(c(Bids_set4, Asks_set4))))
+lines(Asks_set4, type = "l", pch = 16, col = "red")
+
+# Add legend
+legend("topright", legend = c("Bids", "Asks"), col = c("blue", "red"), lty = 1, cex = 0.8)
+
+# Add horizontal lines for the averages
+abline(h = average_bids, col = "blue", lty = 1)
+abline(h = average_asks, col = "red", lty = 1)
+```
+
 
 
 
 ```{r}
-install.packages("reticulate")
-library(reticulate)
+# Initialize empty vectors to store the Bid and Ask values
+MM_pnl_set4 <- numeric()
+Informed_pnl_set4 <- numeric()
+NoisyInformed1_pnl_set4 <- numeric()
+NoisyInformed2_pnl_set4 <- numeric()
+Noisy1_pnl_set4 <- numeric()
+Noisy2_pnl_set4 <- numeric()
+StochNoisy_pnl_set4 <- numeric()
+
+# Loop through each iteration (n)
+for (n in 1:10) {
+
+  MM_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 6])), ", ")[[1]]
+  
+  Informed_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 8])), ", ")[[1]]
+  
+  NoisyInformed1_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 10])), ", ")[[1]]
+  
+  NoisyInformed2_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 12])), ", ")[[1]]
+  
+  Noisy1_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 14])), ", ")[[1]]
+  
+  Noisy2_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 16])), ", ")[[1]]
+  
+  StochNoisy_pnl_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 18])), ", ")[[1]]
+  
+  # Convert Bid and Ask values to numeric and append to the vectors
+  MM_pnl_set4 <- c(MM_pnl_set4, as.numeric(MM_pnl_values))
+  Informed_pnl_set4 <- c(Informed_pnl_set4, as.numeric(Informed_pnl_values))
+  NoisyInformed1_pnl_set4 <- c(NoisyInformed1_pnl_set4, as.numeric(NoisyInformed1_pnl_values))
+  NoisyInformed2_pnl_set4 <- c(NoisyInformed2_pnl_set4, as.numeric(NoisyInformed2_pnl_values))
+  Noisy1_pnl_set4 <- c(Noisy_pnl_set4, as.numeric(Noisy1_pnl_values))
+  Noisy2_pnl_set4 <- c(Noisy2_pnl_set4, as.numeric(Noisy2_pnl_values))
+  StochNoisy_pnl_set4 <- c(StochNoisy_pnl_set4, as.numeric(StochNoisy_pnl_values))
+}
+
+# Calculate the average of Bid and Ask values
+#average_MM <- mean(MM_set4, na.rm = TRUE)
+#average_IN <- mean(IN_set4, na.rm = TRUE)
+
+# Plot the Bid and Ask values on the same plot
+plot(MM_pnl_set4, type = "l", pch = 16, col = "black", main = "PNL in set 4", xlab = "Iteration", ylab = "Value", ylim = c(min(c(MM_pnl_set4, Informed_pnl_set4, NoisyInformed1_pnl_set4, NoisyInformed2_pnl_set4, Noisy1_pnl_set4, Noisy2_pnl_set4, StochNoisy_pnl_set4)), max(c(MM_pnl_set4, Informed_pnl_set4, NoisyInformed1_pnl_set4, NoisyInformed2_pnl_set4, Noisy1_pnl_set4, Noisy2_pnl_set4, StochNoisy_pnl_set4))))
+lines(Informed_pnl_set4, type = "l", pch = 16, col = "red")
+lines(NoisyInformed1_pnl_set4, type = "l", pch = 16, col = "green")
+lines(NoisyInformed2_pnl_set4, type = "l", pch = 16, col = "yellow")
+lines(Noisy1_pnl_set4, type = "l", pch = 16, col = "blue")
+lines(Noisy2_pnl_set4, type = "l", pch = 16, col = "purple")
+lines(StochNoisy_pnl_set4, type = "l", pch = 16, col = "orange")
+
+
+# Add legend
+legend("bottomright", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+
+# Add horizontal lines for the averages
+#abline(h = average_MM, col = "blue", lty = 1)
+#abline(h = average_IN, col = "red", lty = 1)
+
 ```
+
 
 ```{r}
-# Load the pickle file using Python's pickle module
-py <- import_builtins()
-pickle <- py$pickle
-file_path <- "/Users/wanyisu/Desktop/simulation_1.pkl"  # Replace "your_file_path.pkl" with the path to your pickle file
+# Initialize empty vectors to store the Bid and Ask values
+MM_pos_set4 <- numeric()
+Informed_pos_set4 <- numeric()
+NoisyInformed1_pos_set4 <- numeric()
+NoisyInformed2_pos_set4 <- numeric()
+Noisy1_pos_set4 <- numeric()
+Noisy2_pos_set4 <- numeric()
+StochNoisy_pos_set4 <- numeric()
 
-# Load the pickle file
-with(pickle$load(open(file_path, "rb")), {
-  # Access the objects stored in the pickle file
-  # For example, if your pickle file contains a variable named 'data', you can access it like this:
-  data <- data
-})
+# Loop through each iteration (n)
+for (n in 1:10) {
+
+  MM_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 7])), ", ")[[1]]
+  
+  Informed_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 9])), ", ")[[1]]
+  
+  NoisyInformed1_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 11])), ", ")[[1]]
+  
+  NoisyInformed2_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 13])), ", ")[[1]]
+  
+  Noisy1_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 15])), ", ")[[1]]
+  
+  Noisy2_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 17])), ", ")[[1]]
+  
+  StochNoisy_pos_values <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4[n, 19])), ", ")[[1]]
+  
+  # Convert Bid and Ask values to numeric and append to the vectors
+  MM_pos_set4 <- c(MM_pos_set4, as.numeric(MM_pos_values))
+  Informed_pos_set4 <- c(Informed_pos_set4, as.numeric(Informed_pos_values))
+  NoisyInformed1_pos_set4 <- c(NoisyInformed1_pos_set4, as.numeric(NoisyInformed1_pos_values))
+  NoisyInformed2_pos_set4 <- c(NoisyInformed2_pos_set4, as.numeric(NoisyInformed2_pos_values))
+  Noisy1_pos_set4 <- c(Noisy_pos_set4, as.numeric(Noisy1_pos_values))
+  Noisy2_pos_set4 <- c(Noisy2_pos_set4, as.numeric(Noisy2_pos_values))
+  StochNoisy_pos_set4 <- c(StochNoisy_pos_set4, as.numeric(StochNoisy_pos_values))
+}
+
+# Calculate the average of Bid and Ask values
+#average_MM <- mean(MM_set4, na.rm = TRUE)
+#average_IN <- mean(IN_set4, na.rm = TRUE)
+
+# Plot the Bid and Ask values on the same plot
+plot(MM_pos_set4, type = "l", pch = 16, col = "black", main = "Position in set 4", xlab = "Iteration", ylab = "Value", ylim = c(min(c(MM_pos_set4, Informed_pos_set4, NoisyInformed1_pos_set4, NoisyInformed2_pos_set4, Noisy1_pos_set4, Noisy2_pos_set4, StochNoisy_pos_set4)), max(c(MM_pos_set4, Informed_pos_set4, NoisyInformed1_pos_set4, NoisyInformed2_pos_set4, Noisy1_pos_set4, Noisy2_pos_set4, StochNoisy_pos_set4))))
+lines(Informed_pos_set4, type = "l", pch = 16, col = "red")
+lines(NoisyInformed1_pos_set4, type = "l", pch = 16, col = "green")
+lines(NoisyInformed2_pos_set4, type = "l", pch = 16, col = "yellow")
+lines(Noisy1_pos_set4, type = "l", pch = 16, col = "blue")
+lines(Noisy2_pos_set4, type = "l", pch = 16, col = "purple")
+lines(StochNoisy_pos_set4, type = "l", pch = 16, col = "orange")
+
+
+# Add legend
+legend("topleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+
+# Add horizontal lines for the averages
+#abline(h = average_MM, col = "blue", lty = 1)
+#abline(h = average_IN, col = "red", lty = 1)
 ```
-
-
 
 
 
