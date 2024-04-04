@@ -1,6 +1,6 @@
 from mesa import Agent, Model
 from mesa.time import RandomActivation
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 import numpy as np
