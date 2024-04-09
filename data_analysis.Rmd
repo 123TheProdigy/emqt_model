@@ -210,13 +210,13 @@ for (n in 1:10) {
   TrueValues_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 2])), ", ")
   
   # Extract Expected values from the aggregated_results_4 dataframe
-  ExpectedValues_set51 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 3])), ", ")
+  ExpectedValues_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[n, 3])), ", ")
   
   # Loop through each position (i)
   for (i in 1:100) {
     # Extract True and Expected values for the i-th position
-    True_values <- sapply(TrueValues_set5, function(x) as.numeric(x[i]))
-    Expected_values <- sapply(ExpectedValues_set5, function(x) as.numeric(x[i]))
+    True_values <- sapply(TrueValues_set1, function(x) as.numeric(x[i]))
+    Expected_values <- sapply(ExpectedValues_set1, function(x) as.numeric(x[i]))
     
     # Calculate the average of True and Expected values for the i-th position
     average_true[i, n] <- mean(True_values, na.rm = TRUE)
@@ -414,10 +414,437 @@ legend("bottomleft", legend = c("Market Maker", "Informed 1", "Informed 2", "Inf
 
 
 
-## set 2
+## set 2 (1 Informed + 1 noisy informed + 1 noisy + 1 stochastic noisy + 1 mr + 1 mom)
+
+```{r}
+# Initialize matrices to store averages for each position
+average_true <- matrix(NA, nrow = 100, ncol = 10)
+average_expected <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  TrueValues_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 2])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  ExpectedValues_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 3])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    True_values <- sapply(TrueValues_set1, function(x) as.numeric(x[i]))
+    Expected_values <- sapply(ExpectedValues_set1, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_true[i, n] <- mean(True_values, na.rm = TRUE)
+    average_expected[i, n] <- mean(Expected_values, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_true <- rowMeans(average_true, na.rm = TRUE)
+overall_average_expected <- rowMeans(average_expected, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_true, type = "l", pch = 16, col = "blue", main = "Overall Average of True vs Expected Values", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_true, overall_average_expected)), max(c(overall_average_true, overall_average_expected))))
+lines(overall_average_expected, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_bid <- matrix(NA, nrow = 100, ncol = 10)
+average_ask <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  Bids_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 4])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  Asks_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 5])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    Bids <- sapply(Bids_set2, function(x) as.numeric(x[i]))
+    Asks <- sapply(Asks_set2, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_bid[i, n] <- mean(Bids, na.rm = TRUE)
+    average_ask[i, n] <- mean(Asks, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_bid <- rowMeans(average_bid, na.rm = TRUE)
+overall_average_ask <- rowMeans(average_ask, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_bid, type = "l", pch = 16, col = "blue", main = "Overall Average of Bids vs Asks", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_bid, overall_average_ask)), max(c(overall_average_bid, overall_average_ask))))
+lines(overall_average_ask, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("Bids", "Asks"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_mr_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_mom_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 6])), ", ")
+
+  Informed_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 8])), ", ")
+  
+  NoisyInformed_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 10])), ", ")
+  
+  Noisy_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 12])), ", ")
+  
+  StochNoisy_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 14])), ", ")
+  
+  mr_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 16])), ", ")
+  
+  mom_pnl_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set2, function(x) as.numeric(x[i]))
+    Informed_pnl <- sapply(Informed_pnl_set2, function(x) as.numeric(x[i]))
+    NoisyInformed_pnl <- sapply(NoisyInformed_pnl_set2, function(x) as.numeric(x[i]))
+    Noisy_pnl <- sapply(Noisy_pnl_set2, function(x) as.numeric(x[i]))
+    StochNoisy_pnl <- sapply(StochNoisy_pnl_set2, function(x) as.numeric(x[i]))
+    mr_pnl <- sapply(mr_pnl_set2, function(x) as.numeric(x[i]))
+    mom_pnl <- sapply(mom_pnl_set2, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Informed_pnl[i, n] <- mean(Informed_pnl, na.rm = TRUE)
+    average_NoisyInformed_pnl[i, n] <- mean(NoisyInformed_pnl, na.rm = TRUE)
+    average_Noisy_pnl[i, n] <- mean(Noisy_pnl, na.rm = TRUE)
+    average_StochNoisy_pnl[i, n] <- mean(StochNoisy_pnl, na.rm = TRUE)
+    average_mr_pnl[i, n] <- mean(mr_pnl, na.rm = TRUE)
+    average_mom_pnl[i, n] <- mean(mom_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Informed_pnl <- rowMeans(average_Informed_pnl, na.rm = TRUE)
+overall_average_NoisyInformed_pnl <- rowMeans(average_NoisyInformed_pnl, na.rm = TRUE)
+overall_average_Noisy_pnl <- rowMeans(average_Noisy_pnl, na.rm = TRUE)
+overall_average_StochNoisy_pnl <- rowMeans(average_StochNoisy_pnl, na.rm = TRUE)
+overall_average_mr_pnl <- rowMeans(average_mr_pnl, na.rm = TRUE)
+overall_average_mom_pnl <- rowMeans(average_mom_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed_pnl, overall_average_Noisy_pnl, overall_average_StochNoisy_pnl, overall_average_mr_pnl, overall_average_mom_pnl)), max(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed_pnl, overall_average_Noisy_pnl, overall_average_StochNoisy_pnl, overall_average_mr_pnl, overall_average_mom_pnl))))
+lines(overall_average_Informed_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_Noisy_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_StochNoisy_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_mr_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_mom_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed", "Noisy", "Stochastic Noisy", "Mean Reversion", "Momentum"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_mr_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_mom_pos <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 7])), ", ")
+
+  Informed_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 9])), ", ")
+  
+  NoisyInformed_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 11])), ", ")
+  
+  Noisy_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 13])), ", ")
+  
+  StochNoisy_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 15])), ", ")
+  
+  mr_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 17])), ", ")
+  
+  mom_pos_set2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_2[n, 19])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pos <- sapply(MM_pos_set2, function(x) as.numeric(x[i]))
+    Informed_pos <- sapply(Informed_pos_set2, function(x) as.numeric(x[i]))
+    NoisyInformed_pos <- sapply(NoisyInformed_pos_set2, function(x) as.numeric(x[i]))
+    Noisy_pos <- sapply(Noisy_pos_set2, function(x) as.numeric(x[i]))
+    StochNoisy_pos <- sapply(StochNoisy_pos_set2, function(x) as.numeric(x[i]))
+    mr_pos <- sapply(mr_pos_set2, function(x) as.numeric(x[i]))
+    mom_pos <- sapply(mom_pos_set2, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pos[i, n] <- mean(MM_pos, na.rm = TRUE)
+    average_Informed_pos[i, n] <- mean(Informed_pos, na.rm = TRUE)
+    average_NoisyInformed_pos[i, n] <- mean(NoisyInformed_pos, na.rm = TRUE)
+    average_Noisy_pos[i, n] <- mean(Noisy_pos, na.rm = TRUE)
+    average_StochNoisy_pos[i, n] <- mean(StochNoisy_pos, na.rm = TRUE)
+    average_mr_pos[i, n] <- mean(mr_pos, na.rm = TRUE)
+    average_mom_pos[i, n] <- mean(mom_pos, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pos <- rowMeans(average_MM_pos, na.rm = TRUE)
+overall_average_Informed_pos <- rowMeans(average_Informed_pos, na.rm = TRUE)
+overall_average_NoisyInformed_pos <- rowMeans(average_NoisyInformed_pos, na.rm = TRUE)
+overall_average_Noisy_pos <- rowMeans(average_Noisy_pos, na.rm = TRUE)
+overall_average_StochNoisy_pos <- rowMeans(average_StochNoisy_pos, na.rm = TRUE)
+overall_average_mr_pos <- rowMeans(average_mr_pos, na.rm = TRUE)
+overall_average_mom_pos <- rowMeans(average_mom_pos, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pos, type = "l", pch = 16, col = "black", main = "Overall Average Position", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pos, overall_average_Informed_pos, overall_average_NoisyInformed_pos, overall_average_Noisy_pos, overall_average_StochNoisy_pos, overall_average_mr_pos, overall_average_mom_pos)), max(c(overall_average_MM_pos, overall_average_Informed_pos, overall_average_NoisyInformed_pos, overall_average_Noisy_pos, overall_average_StochNoisy_pos, overall_average_mr_pos, overall_average_mom_pos))))
+lines(overall_average_Informed_pos, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed_pos, type = "l", pch = 16, col = "green")
+lines(overall_average_Noisy_pos, type = "l", pch = 16, col = "yellow")
+lines(overall_average_StochNoisy_pos, type = "l", pch = 16, col = "blue")
+lines(overall_average_mr_pos, type = "l", pch = 16, col = "purple")
+lines(overall_average_mom_pos, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed", "Noisy", "Stochastic Noisy", "Mean Reversion", "Momentum"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
 
 
-## set 3
+## set 3 (2 stochastic noisy + 2 mr + 2 mom)
+
+```{r}
+# Initialize matrices to store averages for each position
+average_true <- matrix(NA, nrow = 100, ncol = 10)
+average_expected <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  TrueValues_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 2])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  ExpectedValues_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 3])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    True_values <- sapply(TrueValues_set3, function(x) as.numeric(x[i]))
+    Expected_values <- sapply(ExpectedValues_set3, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_true[i, n] <- mean(True_values, na.rm = TRUE)
+    average_expected[i, n] <- mean(Expected_values, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_true <- rowMeans(average_true, na.rm = TRUE)
+overall_average_expected <- rowMeans(average_expected, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_true, type = "l", pch = 16, col = "blue", main = "Overall Average of True vs Expected Values", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_true, overall_average_expected)), max(c(overall_average_true, overall_average_expected))))
+lines(overall_average_expected, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+
+```{r}
+# Initialize matrices to store averages for each position
+average_bid <- matrix(NA, nrow = 100, ncol = 10)
+average_ask <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  Bids_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 4])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  Asks_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 5])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    Bids <- sapply(Bids_set3, function(x) as.numeric(x[i]))
+    Asks <- sapply(Asks_set3, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_bid[i, n] <- mean(Bids, na.rm = TRUE)
+    average_ask[i, n] <- mean(Asks, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_bid <- rowMeans(average_bid, na.rm = TRUE)
+overall_average_ask <- rowMeans(average_ask, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_bid, type = "l", pch = 16, col = "blue", main = "Overall Average of Bids vs Asks", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_bid, overall_average_ask)), max(c(overall_average_bid, overall_average_ask))))
+lines(overall_average_ask, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("Bids", "Asks"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_mr1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_mr2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_mom1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_mom2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 6])), ", ")
+
+  StochNoisy1_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 8])), ", ")
+  
+  StochNoisy2_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 10])), ", ")
+  
+  mr1_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 12])), ", ")
+  
+  mr2_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 14])), ", ")
+  
+  mom1_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 16])), ", ")
+  
+  mom2_pnl_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set3, function(x) as.numeric(x[i]))
+    StochNoisy1_pnl <- sapply(StochNoisy1_pnl_set3, function(x) as.numeric(x[i]))
+    StochNoisy2_pnl <- sapply(StochNoisy2_pnl_set3, function(x) as.numeric(x[i]))
+    mr1_pnl <- sapply(mr1_pnl_set3, function(x) as.numeric(x[i]))
+    mr2_pnl <- sapply(mr2_pnl_set3, function(x) as.numeric(x[i]))
+    mom1_pnl <- sapply(mom1_pnl_set3, function(x) as.numeric(x[i]))
+    mom2_pnl <- sapply(mom2_pnl_set3, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_StochNoisy1_pnl[i, n] <- mean(StochNoisy1_pnl, na.rm = TRUE)
+    average_StochNoisy2_pnl[i, n] <- mean(StochNoisy2_pnl, na.rm = TRUE)
+    average_mr1_pnl[i, n] <- mean(mr1_pnl, na.rm = TRUE)
+    average_mr2_pnl[i, n] <- mean(mr2_pnl, na.rm = TRUE)
+    average_mom1_pnl[i, n] <- mean(mom1_pnl, na.rm = TRUE)
+    average_mom2_pnl[i, n] <- mean(mom2_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_StochNoisy1_pnl <- rowMeans(average_StochNoisy1_pnl, na.rm = TRUE)
+overall_average_StochNoisy2_pnl <- rowMeans(average_StochNoisy2_pnl, na.rm = TRUE)
+overall_average_mr1_pnl <- rowMeans(average_mr1_pnl, na.rm = TRUE)
+overall_average_mr2_pnl <- rowMeans(average_mr2_pnl, na.rm = TRUE)
+overall_average_mom1_pnl <- rowMeans(average_mom1_pnl, na.rm = TRUE)
+overall_average_mom2_pnl <- rowMeans(average_mom2_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_StochNoisy1_pnl, overall_average_StochNoisy2_pnl, overall_average_mr1_pnl, overall_average_mr2_pnl, overall_average_mom1_pnl, overall_average_mom2_pnl)), max(c(overall_average_MM_pnl, overall_average_StochNoisy1_pnl, overall_average_StochNoisy2_pnl, overall_average_mr1_pnl, overall_average_mr2_pnl, overall_average_mom1_pnl, overall_average_mom2_pnl))))
+lines(overall_average_StochNoisy1_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_StochNoisy2_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_mr1_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_mr2_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_mom1_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_mom2_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Stochastic Noisy 1", "Stochastic Noisy 2", "Mean Reversion 1", "Mean Reversion 2", "Momentum 1", "Momentum 2"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy1_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy2_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_mr1_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_mr2_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_mom1_pos <- matrix(NA, nrow = 100, ncol = 10)
+average_mom2_pos <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 7])), ", ")
+
+  StochNoisy1_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 9])), ", ")
+  
+  StochNoisy2_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 11])), ", ")
+  
+  mr1_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 12])), ", ")
+  
+  mr2_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 15])), ", ")
+  
+  mom1_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 17])), ", ")
+  
+  mom2_pos_set3 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_3[n, 19])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pos <- sapply(MM_pos_set3, function(x) as.numeric(x[i]))
+    StochNoisy1_pos <- sapply(StochNoisy1_pos_set3, function(x) as.numeric(x[i]))
+    StochNoisy2_pos <- sapply(StochNoisy2_pos_set3, function(x) as.numeric(x[i]))
+    mr1_pos <- sapply(mr1_pos_set3, function(x) as.numeric(x[i]))
+    mr2_pos <- sapply(mr2_pos_set3, function(x) as.numeric(x[i]))
+    mom1_pos <- sapply(mom1_pos_set3, function(x) as.numeric(x[i]))
+    mom2_pos <- sapply(mom2_pos_set3, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pos[i, n] <- mean(MM_pos, na.rm = TRUE)
+    average_StochNoisy1_pos[i, n] <- mean(StochNoisy1_pos, na.rm = TRUE)
+    average_StochNoisy2_pos[i, n] <- mean(StochNoisy2_pos, na.rm = TRUE)
+    average_mr1_pos[i, n] <- mean(mr1_pos, na.rm = TRUE)
+    average_mr2_pos[i, n] <- mean(mr2_pos, na.rm = TRUE)
+    average_mom1_pos[i, n] <- mean(mom1_pos, na.rm = TRUE)
+    average_mom2_pos[i, n] <- mean(mom2_pos, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pos <- rowMeans(average_MM_pos, na.rm = TRUE)
+overall_average_StochNoisy1_pos <- rowMeans(average_StochNoisy1_pos, na.rm = TRUE)
+overall_average_StochNoisy2_pos <- rowMeans(average_StochNoisy2_pos, na.rm = TRUE)
+overall_average_mr1_pos <- rowMeans(average_mr1_pos, na.rm = TRUE)
+overall_average_mr2_pos <- rowMeans(average_mr2_pos, na.rm = TRUE)
+overall_average_mom1_pos <- rowMeans(average_mom1_pos, na.rm = TRUE)
+overall_average_mom2_pos <- rowMeans(average_mom2_pos, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pos, type = "l", pch = 16, col = "black", main = "Overall Average Position", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pos, overall_average_StochNoisy1_pos, overall_average_StochNoisy2_pos, overall_average_mr1_pos, overall_average_mr2_pos, overall_average_mom1_pos, overall_average_mom2_pos)), max(c(overall_average_MM_pos, overall_average_StochNoisy1_pos, overall_average_StochNoisy2_pos, overall_average_mr1_pos, overall_average_mr2_pos, overall_average_mom1_pos, overall_average_mom2_pos))))
+lines(overall_average_StochNoisy1_pos, type = "l", pch = 16, col = "red")
+lines(overall_average_StochNoisy2_pos, type = "l", pch = 16, col = "green")
+lines(overall_average_mr1_pos, type = "l", pch = 16, col = "yellow")
+lines(overall_average_mr2_pos, type = "l", pch = 16, col = "blue")
+lines(overall_average_mom1_pos, type = "l", pch = 16, col = "purple")
+lines(overall_average_mom2_pos, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Stochastic Noisy 1", "Stochastic Noisy 2", "Mean Reversion 1", "Mean Reversion 2", "Momentum 1", "Momentum 2"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
 
 
 ## set 4 (1 informed + 2 noisy informed + 2 noisy + 1 stochastic noisy)
