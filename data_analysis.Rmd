@@ -2270,12 +2270,438 @@ legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", 
 ```
 
 
-## set9
+## set9 (Mean Reversion: 6)
+
+
+```{r}
+# Initialize matrices to store averages for each position
+average_true <- matrix(NA, nrow = 100, ncol = 10)
+average_expected <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  TrueValues_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 2])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  ExpectedValues_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 3])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    True_values <- sapply(TrueValues_set9, function(x) as.numeric(x[i]))
+    Expected_values <- sapply(ExpectedValues_set9, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_true[i, n] <- mean(True_values, na.rm = TRUE)
+    average_expected[i, n] <- mean(Expected_values, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_true <- rowMeans(average_true, na.rm = TRUE)
+overall_average_expected <- rowMeans(average_expected, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_true, type = "l", pch = 16, col = "blue", main = "Overall Average of True vs Expected Values", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_true, overall_average_expected)), max(c(overall_average_true, overall_average_expected))))
+lines(overall_average_expected, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_bid <- matrix(NA, nrow = 100, ncol = 10)
+average_ask <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  Bids_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 4])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  Asks_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 5])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    Bids <- sapply(Bids_set9, function(x) as.numeric(x[i]))
+    Asks <- sapply(Asks_set9, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_bid[i, n] <- mean(Bids, na.rm = TRUE)
+    average_ask[i, n] <- mean(Asks, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_bid <- rowMeans(average_bid, na.rm = TRUE)
+overall_average_ask <- rowMeans(average_ask, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_bid, type = "l", pch = 16, col = "blue", main = "Overall Average of Bids vs Asks", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_bid, overall_average_ask)), max(c(overall_average_bid, overall_average_ask))))
+lines(overall_average_ask, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("Bids", "Asks"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR3_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR4_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR5_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR6_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 6])), ", ")
+
+  MR1_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 8])), ", ")
+  
+  MR2_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 10])), ", ")
+  
+  MR3_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 12])), ", ")
+  
+  MR4_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 14])), ", ")
+  
+  MR5_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 16])), ", ")
+  
+  MR6_pnl_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set9, function(x) as.numeric(x[i]))
+    MR1_pnl <- sapply(MR1_pnl_set9, function(x) as.numeric(x[i]))
+    MR2_pnl <- sapply(MR2_pnl_set9, function(x) as.numeric(x[i]))
+    MR3_pnl <- sapply(MR3_pnl_set9, function(x) as.numeric(x[i]))
+    MR4_pnl <- sapply(MR4_pnl_set9, function(x) as.numeric(x[i]))
+    MR5_pnl <- sapply(MR5_pnl_set9, function(x) as.numeric(x[i]))
+    MR6_pnl <- sapply(MR6_pnl_set9, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_MR1_pnl[i, n] <- mean(MR1_pnl, na.rm = TRUE)
+    average_MR2_pnl[i, n] <- mean(MR2_pnl, na.rm = TRUE)
+    average_MR3_pnl[i, n] <- mean(MR3_pnl, na.rm = TRUE)
+    average_MR4_pnl[i, n] <- mean(MR4_pnl, na.rm = TRUE)
+    average_MR5_pnl[i, n] <- mean(MR5_pnl, na.rm = TRUE)
+    average_MR6_pnl[i, n] <- mean(MR6_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_MR1_pnl <- rowMeans(average_MR1_pnl, na.rm = TRUE)
+overall_average_MR2_pnl <- rowMeans(average_MR2_pnl, na.rm = TRUE)
+overall_average_MR3_pnl <- rowMeans(average_MR3_pnl, na.rm = TRUE)
+overall_average_MR4_pnl <- rowMeans(average_MR4_pnl, na.rm = TRUE)
+overall_average_MR5_pnl <- rowMeans(average_MR5_pnl, na.rm = TRUE)
+overall_average_MR6_pnl <- rowMeans(average_MR6_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_MR1_pnl, overall_average_MR2_pnl, overall_average_MR3_pnl, overall_average_MR4_pnl, overall_average_MR5_pnl, overall_average_MR6_pnl)), max(c(overall_average_MM_pnl, overall_average_MR1_pnl, overall_average_MR2_pnl, overall_average_MR3_pnl, overall_average_MR4_pnl, overall_average_MR5_pnl, overall_average_MR6_pnl))))
+lines(overall_average_MR1_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_MR2_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_MR3_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_MR4_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_MR5_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_MR6_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "MR1", "MR2", "MR3", "MR4", "MR5", "MR6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR3_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR4_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR5_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_MR6_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 7])), ", ")
+
+  MR1_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 9])), ", ")
+  
+  MR2_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 11])), ", ")
+  
+  MR3_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 13])), ", ")
+  
+  MR4_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 15])), ", ")
+  
+  MR5_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 17])), ", ")
+  
+  MR6_pos_set9 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_9[n, 19])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pos <- sapply(MM_pos_set9, function(x) as.numeric(x[i]))
+    MR1_pos <- sapply(MR1_pos_set9, function(x) as.numeric(x[i]))
+    MR2_pos <- sapply(MR2_pos_set9, function(x) as.numeric(x[i]))
+    MR3_pos <- sapply(MR3_pos_set9, function(x) as.numeric(x[i]))
+    MR4_pos <- sapply(MR4_pos_set9, function(x) as.numeric(x[i]))
+    MR5_pos <- sapply(MR5_pos_set9, function(x) as.numeric(x[i]))
+    MR6_pos <- sapply(MR6_pos_set9, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pos[i, n] <- mean(MM_pos, na.rm = TRUE)
+    average_MR1_pos[i, n] <- mean(MR1_pos, na.rm = TRUE)
+    average_MR2_pos[i, n] <- mean(MR2_pos, na.rm = TRUE)
+    average_MR3_pos[i, n] <- mean(MR3_pos, na.rm = TRUE)
+    average_MR4_pos[i, n] <- mean(MR4_pos, na.rm = TRUE)
+    average_MR5_pos[i, n] <- mean(MR5_pos, na.rm = TRUE)
+    average_MR6_pos[i, n] <- mean(MR6_pos, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pos <- rowMeans(average_MM_pos, na.rm = TRUE)
+overall_average_MR1_pos <- rowMeans(average_MR1_pos, na.rm = TRUE)
+overall_average_MR2_pos <- rowMeans(average_MR2_pos, na.rm = TRUE)
+overall_average_MR3_pos <- rowMeans(average_MR3_pos, na.rm = TRUE)
+overall_average_MR4_pos <- rowMeans(average_MR4_pos, na.rm = TRUE)
+overall_average_MR5_pos <- rowMeans(average_MR5_pos, na.rm = TRUE)
+overall_average_MR6_pos <- rowMeans(average_MR6_pos, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pos, type = "l", pch = 16, col = "black", main = "Overall Average Position", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pos, overall_average_MR1_pos, overall_average_MR2_pos, overall_average_MR3_pos, overall_average_MR4_pos, overall_average_MR5_pos, overall_average_MR6_pos)), max(c(overall_average_MM_pos, overall_average_MR1_pos, overall_average_MR2_pos, overall_average_MR3_pos, overall_average_MR4_pos, overall_average_MR5_pos, overall_average_MR6_pos))))
+lines(overall_average_MR1_pos, type = "l", pch = 16, col = "red")
+lines(overall_average_MR2_pos, type = "l", pch = 16, col = "green")
+lines(overall_average_MR3_pos, type = "l", pch = 16, col = "yellow")
+lines(overall_average_MR4_pos, type = "l", pch = 16, col = "blue")
+lines(overall_average_MR5_pos, type = "l", pch = 16, col = "purple")
+lines(overall_average_MR6_pos, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "MR1", "MR2", "MR3", "MR4", "MR5", "MR6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+## set10 (Mom : 6)
+
+```{r}
+# Initialize matrices to store averages for each position
+average_true <- matrix(NA, nrow = 100, ncol = 10)
+average_expected <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  TrueValues_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 2])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  ExpectedValues_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 3])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    True_values <- sapply(TrueValues_set10, function(x) as.numeric(x[i]))
+    Expected_values <- sapply(ExpectedValues_set10, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_true[i, n] <- mean(True_values, na.rm = TRUE)
+    average_expected[i, n] <- mean(Expected_values, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_true <- rowMeans(average_true, na.rm = TRUE)
+overall_average_expected <- rowMeans(average_expected, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_true, type = "l", pch = 16, col = "blue", main = "Overall Average of True vs Expected Values", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_true, overall_average_expected)), max(c(overall_average_true, overall_average_expected))))
+lines(overall_average_expected, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
 
 
 
-## set10
 
+```{r}
+# Initialize matrices to store averages for each position
+average_bid <- matrix(NA, nrow = 100, ncol = 10)
+average_ask <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+  # Extract True values from the aggregated_results_4 dataframe
+  Bids_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 4])), ", ")
+  
+  # Extract Expected values from the aggregated_results_4 dataframe
+  Asks_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 5])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    Bids <- sapply(Bids_set10, function(x) as.numeric(x[i]))
+    Asks <- sapply(Asks_set10, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_bid[i, n] <- mean(Bids, na.rm = TRUE)
+    average_ask[i, n] <- mean(Asks, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_bid <- rowMeans(average_bid, na.rm = TRUE)
+overall_average_ask <- rowMeans(average_ask, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_bid, type = "l", pch = 16, col = "blue", main = "Overall Average of Bids vs Asks", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_bid, overall_average_ask)), max(c(overall_average_bid, overall_average_ask))))
+lines(overall_average_ask, type = "l", pch = 16, col = "red")
+legend("topright", legend = c("Bids", "Asks"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom3_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom4_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom5_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom6_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 6])), ", ")
+
+  Mom1_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 8])), ", ")
+  
+  Mom2_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 10])), ", ")
+  
+  Mom3_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 12])), ", ")
+  
+  Mom4_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 14])), ", ")
+  
+  Mom5_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 16])), ", ")
+  
+  Mom6_pnl_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set10, function(x) as.numeric(x[i]))
+    Mom1_pnl <- sapply(Mom1_pnl_set10, function(x) as.numeric(x[i]))
+    Mom2_pnl <- sapply(Mom2_pnl_set10, function(x) as.numeric(x[i]))
+    Mom3_pnl <- sapply(Mom3_pnl_set10, function(x) as.numeric(x[i]))
+    Mom4_pnl <- sapply(Mom4_pnl_set10, function(x) as.numeric(x[i]))
+    Mom5_pnl <- sapply(Mom5_pnl_set10, function(x) as.numeric(x[i]))
+    Mom6_pnl <- sapply(Mom6_pnl_set10, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Mom1_pnl[i, n] <- mean(Mom1_pnl, na.rm = TRUE)
+    average_Mom2_pnl[i, n] <- mean(Mom2_pnl, na.rm = TRUE)
+    average_Mom3_pnl[i, n] <- mean(Mom3_pnl, na.rm = TRUE)
+    average_Mom4_pnl[i, n] <- mean(Mom4_pnl, na.rm = TRUE)
+    average_Mom5_pnl[i, n] <- mean(Mom5_pnl, na.rm = TRUE)
+    average_Mom6_pnl[i, n] <- mean(Mom6_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Mom1_pnl <- rowMeans(average_Mom1_pnl, na.rm = TRUE)
+overall_average_Mom2_pnl <- rowMeans(average_Mom2_pnl, na.rm = TRUE)
+overall_average_Mom3_pnl <- rowMeans(average_Mom3_pnl, na.rm = TRUE)
+overall_average_Mom4_pnl <- rowMeans(average_Mom4_pnl, na.rm = TRUE)
+overall_average_Mom5_pnl <- rowMeans(average_Mom5_pnl, na.rm = TRUE)
+overall_average_Mom6_pnl <- rowMeans(average_Mom6_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Mom1_pnl, overall_average_Mom2_pnl, overall_average_Mom3_pnl, overall_average_Mom4_pnl, overall_average_Mom5_pnl, overall_average_Mom6_pnl)), max(c(overall_average_MM_pnl, overall_average_Mom1_pnl, overall_average_Mom2_pnl, overall_average_Mom3_pnl, overall_average_Mom4_pnl, overall_average_Mom5_pnl, overall_average_Mom6_pnl))))
+lines(overall_average_Mom1_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_Mom2_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_Mom3_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Mom4_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_Mom5_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_Mom6_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Mom1", "Mom2", "Mom3", "Mom4", "Mom5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom3_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom4_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom5_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Mom6_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 7])), ", ")
+
+  Mom1_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 9])), ", ")
+  
+  Mom2_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 11])), ", ")
+  
+  Mom3_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 13])), ", ")
+  
+  Mom4_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 15])), ", ")
+  
+  Mom5_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 17])), ", ")
+  
+  Mom6_pos_set10 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_10[n, 19])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pos <- sapply(MM_pos_set10, function(x) as.numeric(x[i]))
+    Mom1_pos <- sapply(Informed_pos_set10, function(x) as.numeric(x[i]))
+    Mom2_pos <- sapply(NoisyInformed1_pos_set10, function(x) as.numeric(x[i]))
+    Mom3_pos <- sapply(NoisyInformed2_pos_set10, function(x) as.numeric(x[i]))
+    Mom4_pos <- sapply(Noisy1_pos_set10, function(x) as.numeric(x[i]))
+    Mom5_pos <- sapply(Noisy2_pos_set10, function(x) as.numeric(x[i]))
+    Mom6_pos <- sapply(Noisy3_pos_set10, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pos[i, n] <- mean(MM_pos, na.rm = TRUE)
+    average_Mom1_pos[i, n] <- mean(Informed_pos, na.rm = TRUE)
+    average_Mom2_pos[i, n] <- mean(NoisyInformed1_pos, na.rm = TRUE)
+    average_Mom3_pos[i, n] <- mean(NoisyInformed2_pos, na.rm = TRUE)
+    average_Mom4_pos[i, n] <- mean(Noisy1_pos, na.rm = TRUE)
+    average_Mom5_pos[i, n] <- mean(Noisy2_pos, na.rm = TRUE)
+    average_Mom6_pos[i, n] <- mean(Noisy3_pos, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pos <- rowMeans(average_MM_pos, na.rm = TRUE)
+overall_average_Mom1_pos <- rowMeans(average_Mom1_pos, na.rm = TRUE)
+overall_average_Mom2_pos <- rowMeans(average_Mom2_pos, na.rm = TRUE)
+overall_average_Mom3_pos <- rowMeans(average_Mom3_pos, na.rm = TRUE)
+overall_average_Mom4_pos <- rowMeans(average_Mom4_pos, na.rm = TRUE)
+overall_average_Mom5_pos <- rowMeans(average_Mom5_pos, na.rm = TRUE)
+overall_average_Mom6_pos <- rowMeans(average_Mom6_pos, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pos, type = "l", pch = 16, col = "black", main = "Overall Average Position", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pos, overall_average_Mom1_pos, overall_average_Mom2_pos, overall_average_Mom3_pos, overall_average_Mom4_pos, overall_average_Mom5_pos, overall_average_Mom6_pos)), max(c(overall_average_MM_pos, overall_average_Mom1_pos, overall_average_Mom2_pos, overall_average_Mom3_pos, overall_average_Mom4_pos, overall_average_Mom5_pos, overall_average_Mom6_pos))))
+lines(overall_average_Mom1_pos, type = "l", pch = 16, col = "red")
+lines(overall_average_Mom2_pos, type = "l", pch = 16, col = "green")
+lines(overall_average_Mom3_pos, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Mom4_pos, type = "l", pch = 16, col = "blue")
+lines(overall_average_Mom5_pos, type = "l", pch = 16, col = "purple")
+lines(overall_average_Mom6_pos, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Mom1", "Mom2", "Mom3", "Mom4", "Mom5", "Mom6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+```
 
 
 ## set11
