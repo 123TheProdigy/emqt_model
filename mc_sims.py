@@ -1,11 +1,9 @@
 import os
-import matplotlib.pyplot as plt
 import pandas as pd
 from main import *
 import shutil
 from tqdm import tqdm
 import warnings
-import sys
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -26,10 +24,7 @@ def prepare_environment(parameter_sets):
             os.makedirs(os.path.join(param_dir, subfolder))
 
 # informed = 0, noisy_informed = 0, noisy = 0, stoch_noisy = 0, mr = 0, mom = 0
-parameter_sets = [{"informed": 0, "noisy_informed": 0, "noisy": 6, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
-                  {"informed": 1, "noisy_informed": 0, "noisy": 5, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
-                  {"informed": 1, "noisy_informed": 5, "noisy": 0, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
-                  {"informed": 1, "noisy_informed": 2, "noisy": 3, "stoch_noisy": 0, "mr": 0, "mom": 0}] #1
+parameter_sets = [{"informed": 1, "noisy_informed": 2, "noisy": 2, "stoch_noisy": 1, "mr": 0, "mom": 0}]
 
 # parameter_sets = [{"informed": 0, "noisy_informed": 0, "noisy": 6, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
 #                   {"informed": 1, "noisy_informed": 0, "noisy": 5, "stoch_noisy": 0, "mr": 0, "mom": 0}, #1
