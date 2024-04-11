@@ -1,0 +1,6 @@
+informed: 1
+noisy_informed: 0
+noisy: 5
+stoch_noisy: 0
+mr: 0
+mom: 0
