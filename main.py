@@ -1,11 +1,8 @@
 from mesa import Agent, Model
 from mesa.time import RandomActivation
-# from joblib import Parallel, delayed
 import random
 from collections import OrderedDict
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import linregress
 
 from objects import Side, Order, Trade, God
 
@@ -552,7 +549,7 @@ class MarketModel(Model):
         self.beta = max(0.01, (noisy + stoch_noisy + mr + mom) / N)
         self.rho = mr / N
         self.theta = mom / N
-        self.god = God(tmax=max_iters, sigma=0.50, jump_prob=0.1, alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta,
+        self.god = God(tmax=max_iters, sigma=0.25, jump_prob=0.1, alpha=self.alpha, beta=self.beta, rho=self.rho, theta=self.theta,
                        mr_thresh=0, mom_thresh=0, eta=0.5, sigma_w=0.05, V0=100, directory=self.directory)
 
     def step(self):
