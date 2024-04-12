@@ -367,7 +367,7 @@ class InformedStrategy:
             return -1
 
 class MeanReversionStrategy:
-    def __init__(self, window_size=10, threshold=1.0):
+    def __init__(self, window_size=10, threshold=0.01):
         self.window_size = window_size
         self.threshold = threshold
 
@@ -382,7 +382,6 @@ class MeanReversionStrategy:
         mean_price = self.calculate_mean(price_history)
         current_price = price_history[-1]
         deviation = current_price - mean_price
-
         if deviation > self.threshold:
             return -1
         elif deviation < -self.threshold:
@@ -476,7 +475,7 @@ class MomentumStrategy:
         if len(price_history) < self.window_size:
             return 0
 
-        ema = self.calculate_ema(price_history)
+        ema = self.calculate_ema(price_history[-self.window_size:])
 
         # Calculate momentum as the difference between the current price and EMA
         momentum = price_history[-1] - ema

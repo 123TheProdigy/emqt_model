@@ -285,7 +285,7 @@ class Vi_prior():
 class God():
     """
     This class will be used to create the true asset prices and will also contain all the functions to calculate Bayesian priors/posteriors
-    as according to the Glosten-Milgrom-Das mode.
+    as according to the Glosten-Milgrom-Das model.
     A key idea of this model is that the true asset price is pre-generated, and infused with random jumps to simulate shocks.
     There are 4 main agent types in this model: market maker, informed trader, noisy informed trader, noise trader
     At time 0, the market maker and informed trader will know the true value of the asset. The noisy informed trader will know the true
