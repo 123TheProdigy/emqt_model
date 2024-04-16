@@ -319,7 +319,7 @@ plot(TrueValue_set1,
      type = "l", 
      pch = 16, 
      col = "green", 
-     main = "True Values in sim 5", 
+     main = "True Values in Simulation 5", 
      xlab = "Iteration", 
      ylab = "Value", 
      ylim = c(min(c(as.numeric(TrueValue_set1), as.numeric(Bids_set1), as.numeric(Asks_set1))), 
@@ -346,7 +346,7 @@ plot(MM_pnl_set1,
      type = "l", 
      pch = 16, 
      col = "black", 
-     main = "PNL sim 5", 
+     main = "PNL Simulation 5", 
      xlab = "Position in List", 
      ylab = "Value",
      ylim = c(min(c(as.numeric(MM_pnl_set1), as.numeric(Informed1_pnl_set1), as.numeric(Informed2_pnl_set1), as.numeric(Informed3_pnl_set1), as.numeric(Informed4_pnl_set1), as.numeric(Informed5_pnl_set1), as.numeric(Informed6_pnl_set1))), 
@@ -686,11 +686,11 @@ overall_average_expected <- rowMeans(average_expected, na.rm = TRUE)
 #legend("topright", legend = c("True Values", "Expected Values"), col = c("blue", "red"), lty = 1, cex = 0.8)
 
 # Plot the overall averages
-plot(overall_average_bid, type = "l", pch = 16, col = "blue", main = "Overall Average of Bids vs Asks & True vs Expected Values", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_bid, overall_average_ask)), max(c(overall_average_bid, overall_average_ask))))
+plot(overall_average_bid, type = "l", pch = 16, col = "blue", main = "Overall Average of Bids vs Asks & True vs Expected Values", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_bid, overall_average_ask, overall_average_true, overall_average_expected)), max(c(overall_average_bid, overall_average_ask, overall_average_true, overall_average_expected))))
 lines(overall_average_ask, type = "l", pch = 16, col = "red")
 lines(overall_average_true, type = "l", pch = 16, col = "green")
 lines(overall_average_expected, type = "l", pch = 16, col = "purple")
-legend("topright", legend = c("Bids", "Asks", "True Value", "Expected Value"), col = c("blue", "red", "green", "purple"), lty = 1, cex = 0.8)
+legend("bottomleft", legend = c("Bids", "Asks", "True Value", "Expected Value"), col = c("blue", "red", "green", "purple"), lty = 1, cex = 0.8)
 ```
 
 
@@ -1050,7 +1050,7 @@ lines(overall_average_mom1_pnl, type = "l", pch = 16, col = "purple")
 lines(overall_average_mom2_pnl, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomleft", legend = c("Market Maker", "Stochastic Noisy 1", "Stochastic Noisy 2", "Mean Reversion 1", "Mean Reversion 2", "Momentum 1", "Momentum 2"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Stochastic Noisy 1", "Stochastic Noisy 2", "Mean Reversion 1", "Mean Reversion 2", "Momentum 1", "Momentum 2"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 
@@ -1610,6 +1610,409 @@ lines(overall_average_StochNoisy_pos, type = "l", pch = 16, col = "orange")
 legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
+### set 4 with sigma = 0.25
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 6])), ", ")
+
+  Informed_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 8])), ", ")
+  
+  NoisyInformed1_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 10])), ", ")
+  
+  NoisyInformed2_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 12])), ", ")
+  
+  Noisy1_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 14])), ", ")
+  
+  Noisy2_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 16])), ", ")
+  
+  StochNoisy_pnl_set4_0_25 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_25[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    Informed_pnl <- sapply(Informed_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    NoisyInformed1_pnl <- sapply(NoisyInformed1_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    NoisyInformed2_pnl <- sapply(NoisyInformed2_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    Noisy1_pnl <- sapply(Noisy1_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    Noisy2_pnl <- sapply(Noisy2_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    StochNoisy_pnl <- sapply(StochNoisy_pnl_set4_0_25, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Informed_pnl[i, n] <- mean(Informed_pnl, na.rm = TRUE)
+    average_NoisyInformed1_pnl[i, n] <- mean(NoisyInformed1_pnl, na.rm = TRUE)
+    average_NoisyInformed2_pnl[i, n] <- mean(NoisyInformed2_pnl, na.rm = TRUE)
+    average_Noisy1_pnl[i, n] <- mean(Noisy1_pnl, na.rm = TRUE)
+    average_Noisy2_pnl[i, n] <- mean(Noisy2_pnl, na.rm = TRUE)
+    average_StochNoisy_pnl[i, n] <- mean(StochNoisy_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Informed_pnl <- rowMeans(average_Informed_pnl, na.rm = TRUE)
+overall_average_NoisyInformed1_pnl <- rowMeans(average_NoisyInformed1_pnl, na.rm = TRUE)
+overall_average_NoisyInformed2_pnl <- rowMeans(average_NoisyInformed2_pnl, na.rm = TRUE)
+overall_average_Noisy1_pnl <- rowMeans(average_Noisy1_pnl, na.rm = TRUE)
+overall_average_Noisy2_pnl <- rowMeans(average_Noisy2_pnl, na.rm = TRUE)
+overall_average_StochNoisy_pnl <- rowMeans(average_StochNoisy_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL (sigma = 0.25)", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl)), max(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl))))
+lines(overall_average_Informed_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed1_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_NoisyInformed2_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Noisy1_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_Noisy2_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_StochNoisy_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+
+### set 4 with sigma = 0.75
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 6])), ", ")
+
+  Informed_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 8])), ", ")
+  
+  NoisyInformed1_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 10])), ", ")
+  
+  NoisyInformed2_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 12])), ", ")
+  
+  Noisy1_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 14])), ", ")
+  
+  Noisy2_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 16])), ", ")
+  
+  StochNoisy_pnl_set4_0_75 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_0_75[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    Informed_pnl <- sapply(Informed_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    NoisyInformed1_pnl <- sapply(NoisyInformed1_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    NoisyInformed2_pnl <- sapply(NoisyInformed2_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    Noisy1_pnl <- sapply(Noisy1_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    Noisy2_pnl <- sapply(Noisy2_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    StochNoisy_pnl <- sapply(StochNoisy_pnl_set4_0_75, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Informed_pnl[i, n] <- mean(Informed_pnl, na.rm = TRUE)
+    average_NoisyInformed1_pnl[i, n] <- mean(NoisyInformed1_pnl, na.rm = TRUE)
+    average_NoisyInformed2_pnl[i, n] <- mean(NoisyInformed2_pnl, na.rm = TRUE)
+    average_Noisy1_pnl[i, n] <- mean(Noisy1_pnl, na.rm = TRUE)
+    average_Noisy2_pnl[i, n] <- mean(Noisy2_pnl, na.rm = TRUE)
+    average_StochNoisy_pnl[i, n] <- mean(StochNoisy_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Informed_pnl <- rowMeans(average_Informed_pnl, na.rm = TRUE)
+overall_average_NoisyInformed1_pnl <- rowMeans(average_NoisyInformed1_pnl, na.rm = TRUE)
+overall_average_NoisyInformed2_pnl <- rowMeans(average_NoisyInformed2_pnl, na.rm = TRUE)
+overall_average_Noisy1_pnl <- rowMeans(average_Noisy1_pnl, na.rm = TRUE)
+overall_average_Noisy2_pnl <- rowMeans(average_Noisy2_pnl, na.rm = TRUE)
+overall_average_StochNoisy_pnl <- rowMeans(average_StochNoisy_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL (sigma = 0.75)", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl)), max(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl))))
+lines(overall_average_Informed_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed1_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_NoisyInformed2_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Noisy1_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_Noisy2_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_StochNoisy_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+
+### set 4 with sigma = 1
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 6])), ", ")
+
+  Informed_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 8])), ", ")
+  
+  NoisyInformed1_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 10])), ", ")
+  
+  NoisyInformed2_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 12])), ", ")
+  
+  Noisy1_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 14])), ", ")
+  
+  Noisy2_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 16])), ", ")
+  
+  StochNoisy_pnl_set4_1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_1[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set4_1, function(x) as.numeric(x[i]))
+    Informed_pnl <- sapply(Informed_pnl_set4_1, function(x) as.numeric(x[i]))
+    NoisyInformed1_pnl <- sapply(NoisyInformed1_pnl_set4_1, function(x) as.numeric(x[i]))
+    NoisyInformed2_pnl <- sapply(NoisyInformed2_pnl_set4_1, function(x) as.numeric(x[i]))
+    Noisy1_pnl <- sapply(Noisy1_pnl_set4_1, function(x) as.numeric(x[i]))
+    Noisy2_pnl <- sapply(Noisy2_pnl_set4_1, function(x) as.numeric(x[i]))
+    StochNoisy_pnl <- sapply(StochNoisy_pnl_set4_1, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Informed_pnl[i, n] <- mean(Informed_pnl, na.rm = TRUE)
+    average_NoisyInformed1_pnl[i, n] <- mean(NoisyInformed1_pnl, na.rm = TRUE)
+    average_NoisyInformed2_pnl[i, n] <- mean(NoisyInformed2_pnl, na.rm = TRUE)
+    average_Noisy1_pnl[i, n] <- mean(Noisy1_pnl, na.rm = TRUE)
+    average_Noisy2_pnl[i, n] <- mean(Noisy2_pnl, na.rm = TRUE)
+    average_StochNoisy_pnl[i, n] <- mean(StochNoisy_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Informed_pnl <- rowMeans(average_Informed_pnl, na.rm = TRUE)
+overall_average_NoisyInformed1_pnl <- rowMeans(average_NoisyInformed1_pnl, na.rm = TRUE)
+overall_average_NoisyInformed2_pnl <- rowMeans(average_NoisyInformed2_pnl, na.rm = TRUE)
+overall_average_Noisy1_pnl <- rowMeans(average_Noisy1_pnl, na.rm = TRUE)
+overall_average_Noisy2_pnl <- rowMeans(average_Noisy2_pnl, na.rm = TRUE)
+overall_average_StochNoisy_pnl <- rowMeans(average_StochNoisy_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL (sigma = 1)", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl)), max(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl))))
+lines(overall_average_Informed_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed1_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_NoisyInformed2_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Noisy1_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_Noisy2_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_StochNoisy_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+
+### set 4 with sigma = 2
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 6])), ", ")
+
+  Informed_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 8])), ", ")
+  
+  NoisyInformed1_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 10])), ", ")
+  
+  NoisyInformed2_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 12])), ", ")
+  
+  Noisy1_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 14])), ", ")
+  
+  Noisy2_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 16])), ", ")
+  
+  StochNoisy_pnl_set4_2 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_2[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set4_2, function(x) as.numeric(x[i]))
+    Informed_pnl <- sapply(Informed_pnl_set4_2, function(x) as.numeric(x[i]))
+    NoisyInformed1_pnl <- sapply(NoisyInformed1_pnl_set4_2, function(x) as.numeric(x[i]))
+    NoisyInformed2_pnl <- sapply(NoisyInformed2_pnl_set4_2, function(x) as.numeric(x[i]))
+    Noisy1_pnl <- sapply(Noisy1_pnl_set4_2, function(x) as.numeric(x[i]))
+    Noisy2_pnl <- sapply(Noisy2_pnl_set4_2, function(x) as.numeric(x[i]))
+    StochNoisy_pnl <- sapply(StochNoisy_pnl_set4_2, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Informed_pnl[i, n] <- mean(Informed_pnl, na.rm = TRUE)
+    average_NoisyInformed1_pnl[i, n] <- mean(NoisyInformed1_pnl, na.rm = TRUE)
+    average_NoisyInformed2_pnl[i, n] <- mean(NoisyInformed2_pnl, na.rm = TRUE)
+    average_Noisy1_pnl[i, n] <- mean(Noisy1_pnl, na.rm = TRUE)
+    average_Noisy2_pnl[i, n] <- mean(Noisy2_pnl, na.rm = TRUE)
+    average_StochNoisy_pnl[i, n] <- mean(StochNoisy_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Informed_pnl <- rowMeans(average_Informed_pnl, na.rm = TRUE)
+overall_average_NoisyInformed1_pnl <- rowMeans(average_NoisyInformed1_pnl, na.rm = TRUE)
+overall_average_NoisyInformed2_pnl <- rowMeans(average_NoisyInformed2_pnl, na.rm = TRUE)
+overall_average_Noisy1_pnl <- rowMeans(average_Noisy1_pnl, na.rm = TRUE)
+overall_average_Noisy2_pnl <- rowMeans(average_Noisy2_pnl, na.rm = TRUE)
+overall_average_StochNoisy_pnl <- rowMeans(average_StochNoisy_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL (sigma = 2)", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl)), max(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl))))
+lines(overall_average_Informed_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed1_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_NoisyInformed2_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Noisy1_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_Noisy2_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_StochNoisy_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+
+### set 4 with sigma = 5
+
+```{r}
+# Initialize matrices to store averages for each position
+average_MM_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Informed_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_NoisyInformed2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy1_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_Noisy2_pnl <- matrix(NA, nrow = 100, ncol = 10)
+average_StochNoisy_pnl <- matrix(NA, nrow = 100, ncol = 10)
+
+# Loop through each simulation (n)
+for (n in 1:10) {
+
+  MM_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 6])), ", ")
+
+  Informed_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 8])), ", ")
+  
+  NoisyInformed1_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 10])), ", ")
+  
+  NoisyInformed2_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 12])), ", ")
+  
+  Noisy1_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 14])), ", ")
+  
+  Noisy2_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 16])), ", ")
+  
+  StochNoisy_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[n, 18])), ", ")
+  
+  # Loop through each position (i)
+  for (i in 1:100) {
+    # Extract True and Expected values for the i-th position
+    MM_pnl <- sapply(MM_pnl_set4_5, function(x) as.numeric(x[i]))
+    Informed_pnl <- sapply(Informed_pnl_set4_5, function(x) as.numeric(x[i]))
+    NoisyInformed1_pnl <- sapply(NoisyInformed1_pnl_set4_5, function(x) as.numeric(x[i]))
+    NoisyInformed2_pnl <- sapply(NoisyInformed2_pnl_set4_5, function(x) as.numeric(x[i]))
+    Noisy1_pnl <- sapply(Noisy1_pnl_set4_5, function(x) as.numeric(x[i]))
+    Noisy2_pnl <- sapply(Noisy2_pnl_set4_5, function(x) as.numeric(x[i]))
+    StochNoisy_pnl <- sapply(StochNoisy_pnl_set4_5, function(x) as.numeric(x[i]))
+    
+    # Calculate the average of True and Expected values for the i-th position
+    average_MM_pnl[i, n] <- mean(MM_pnl, na.rm = TRUE)
+    average_Informed_pnl[i, n] <- mean(Informed_pnl, na.rm = TRUE)
+    average_NoisyInformed1_pnl[i, n] <- mean(NoisyInformed1_pnl, na.rm = TRUE)
+    average_NoisyInformed2_pnl[i, n] <- mean(NoisyInformed2_pnl, na.rm = TRUE)
+    average_Noisy1_pnl[i, n] <- mean(Noisy1_pnl, na.rm = TRUE)
+    average_Noisy2_pnl[i, n] <- mean(Noisy2_pnl, na.rm = TRUE)
+    average_StochNoisy_pnl[i, n] <- mean(StochNoisy_pnl, na.rm = TRUE)
+  }
+}
+
+# Calculate the overall average for each position across all simulations
+overall_average_MM_pnl <- rowMeans(average_MM_pnl, na.rm = TRUE)
+overall_average_Informed_pnl <- rowMeans(average_Informed_pnl, na.rm = TRUE)
+overall_average_NoisyInformed1_pnl <- rowMeans(average_NoisyInformed1_pnl, na.rm = TRUE)
+overall_average_NoisyInformed2_pnl <- rowMeans(average_NoisyInformed2_pnl, na.rm = TRUE)
+overall_average_Noisy1_pnl <- rowMeans(average_Noisy1_pnl, na.rm = TRUE)
+overall_average_Noisy2_pnl <- rowMeans(average_Noisy2_pnl, na.rm = TRUE)
+overall_average_StochNoisy_pnl <- rowMeans(average_StochNoisy_pnl, na.rm = TRUE)
+
+# Plot the overall averages
+plot(overall_average_MM_pnl, type = "l", pch = 16, col = "black", main = "Overall Average PNL (sigma = 5)", xlab = "Position in List", ylab = "Value", ylim = c(min(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl)), max(c(overall_average_MM_pnl, overall_average_Informed_pnl, overall_average_NoisyInformed1_pnl, overall_average_NoisyInformed2_pnl, overall_average_Noisy1_pnl, overall_average_Noisy2_pnl, overall_average_StochNoisy_pnl))))
+lines(overall_average_Informed_pnl, type = "l", pch = 16, col = "red")
+lines(overall_average_NoisyInformed1_pnl, type = "l", pch = 16, col = "green")
+lines(overall_average_NoisyInformed2_pnl, type = "l", pch = 16, col = "yellow")
+lines(overall_average_Noisy1_pnl, type = "l", pch = 16, col = "blue")
+lines(overall_average_Noisy2_pnl, type = "l", pch = 16, col = "purple")
+lines(overall_average_StochNoisy_pnl, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
+
+```{r}
+MM_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 6])), ", ")[[1]]
+Informed_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 8])), ", ")[[1]]
+NoisyInformed1_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 10])), ", ")[[1]]
+NoisyInformed2_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 12])), ", ")[[1]]
+Noisy1_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 14])), ", ")[[1]]
+Noisy2_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 16])), ", ")[[1]]
+StochNoisy_pnl_set4_5 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_4_5[4, 18])), ", ")[[1]]
+
+#Bids_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[5, 4])), ", ")[[1]]
+#Asks_set1 <- strsplit(gsub("\\[|\\]", "", unlist(aggregated_results_1[5, 5])), ", ")[[1]]
+
+plot(MM_pnl_set4_5, 
+     type = "l", 
+     pch = 16, 
+     col = "black", 
+     main = "PNL Simulation 4", 
+     xlab = "Position in List", 
+     ylab = "Value",
+     ylim = c(min(c(as.numeric(MM_pnl_set4_5), as.numeric(Informed_pnl_set4_5), as.numeric(NoisyInformed1_pnl_set4_5), as.numeric(NoisyInformed2_pnl_set4_5), as.numeric(Noisy1_pnl_set4_5), as.numeric(Noisy2_pnl_set4_5), as.numeric(StochNoisy_pnl_set4_5))), 
+              max(c(as.numeric(MM_pnl_set4_5), as.numeric(Informed_pnl_set4_5), as.numeric(NoisyInformed1_pnl_set4_5), as.numeric(NoisyInformed2_pnl_set4_5), as.numeric(Noisy1_pnl_set4_5), as.numeric(Noisy2_pnl_set4_5), as.numeric(StochNoisy_pnl_set4_5)))))
+
+lines(Informed_pnl_set4_5, type = "l", pch = 16, col = "red")
+lines(NoisyInformed1_pnl_set4_5, type = "l", pch = 16, col = "green")
+lines(NoisyInformed2_pnl_set4_5, type = "l", pch = 16, col = "yellow")
+lines(Noisy1_pnl_set4_5, type = "l", pch = 16, col = "blue")
+lines(Noisy2_pnl_set4_5, type = "l", pch = 16, col = "purple")
+lines(StochNoisy_pnl_set4_5, type = "l", pch = 16, col = "orange")
+
+# Add legend
+legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 1", "Noisy 2", "Stochastic Noisy"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+```
+
 
 
 ## set 5 (Noisy*6)
@@ -1825,7 +2228,7 @@ lines(overall_average_Noisy5_pnl, type = "l", pch = 16, col = "purple")
 lines(overall_average_Noisy6_pnl, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomleft", legend = c("Market Maker", "Noisy 1", "Noisy 2", "Noisy 3", "Noisy 4", "Noisy 5", "Noisy 6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Noisy 1", "Noisy 2", "Noisy 3", "Noisy 4", "Noisy 5", "Noisy 6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 
@@ -1897,7 +2300,7 @@ lines(overall_average_Noisy5_pos, type = "l", pch = 16, col = "purple")
 lines(overall_average_Noisy6_pos, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomright", legend = c("Market Maker", "Noisy 1", "Noisy 2", "Noisy 3", "Noisy 4", "Noisy 5", "Noisy 6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Noisy 1", "Noisy 2", "Noisy 3", "Noisy 4", "Noisy 5", "Noisy 6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 
@@ -2188,7 +2591,7 @@ lines(overall_average_Noisy4_pos, type = "l", pch = 16, col = "purple")
 lines(overall_average_Noisy5_pos, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy 1", "Noisy 2", "Noisy 3", "Noisy 4", "Noisy 5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Informed", "Noisy 1", "Noisy 2", "Noisy 3", "Noisy 4", "Noisy 5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 
@@ -2767,7 +3170,7 @@ lines(overall_average_Noisy2_pos, type = "l", pch = 16, col = "purple")
 lines(overall_average_Noisy3_pos, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 3", "Noisy 4", "Noisy 5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Informed", "Noisy Informed 1", "Noisy Informed 2", "Noisy 3", "Noisy 4", "Noisy 5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 
@@ -3274,7 +3677,7 @@ lines(overall_average_Mom5_pnl, type = "l", pch = 16, col = "purple")
 lines(overall_average_Mom6_pnl, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomleft", legend = c("Market Maker", "Informed", "Mom1", "Mom2", "Mom3", "Mom4", "Mom5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Informed", "Mom1", "Mom2", "Mom3", "Mom4", "Mom5"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 ```{r}
@@ -3345,7 +3748,7 @@ lines(overall_average_Mom5_pos, type = "l", pch = 16, col = "purple")
 lines(overall_average_Mom6_pos, type = "l", pch = 16, col = "orange")
 
 # Add legend
-legend("bottomleft", legend = c("Market Maker", "Mom1", "Mom2", "Mom3", "Mom4", "Mom5", "Mom6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
+legend("topleft", legend = c("Market Maker", "Mom1", "Mom2", "Mom3", "Mom4", "Mom5", "Mom6"), col = c("black", "red", "green", "yellow", "blue", "purple", "orange"), lty = 1, cex = 0.8)
 ```
 
 
